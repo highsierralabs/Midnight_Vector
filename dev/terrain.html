@@ -1,0 +1,65 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <title>Terrain dev page</title>
+  <link rel="icon" href="data:,">
+</head>
+<body>
+<script type="module">
+  import { startDevShell } from '/src/testing/devShell.ts';
+  import { createDevPost } from '/src/testing/devPost.ts';
+  import { createFakeWorld } from '/src/testing/fakeWorld.ts';
+  import { createTerrainLayer } from '/src/render/terrain/index.ts';
+  import { createStandInSky, withRefHeight, flatWorld, readHdr } from '/src/render/terrain/dev/devTools.ts';
+
+  // Query, on top of the shell's own: world=ref|fake|flat|real, period=<n>, rise=<n>, sky=0|1, grow=<n>,
+  // probe=pristine|after-fract|unfaded|hard-step, grid=naive, fault=keep-ranges|wrap-64|wrap-4096, msaa=0|2|4
+  const q = new URLSearchParams(location.search);
+  const period = Number(q.get('period') ?? 0);
+  const base = createFakeWorld({ periodChunks: period });
+  let world = base;
+  const name = q.get('world') ?? 'ref';
+  if (name === 'ref') world = withRefHeight(base, { period, ...(q.has('rise') ? { riseWidth: Number(q.get('rise')) } : {}) });
+  if (name === 'flat') world = flatWorld(base);
+  if (name === 'real') {
+    // A variable specifier: a literal import() of a path T01 has not written yet fails this whole inline module (T00 section 4).
+    const realWorld = '/src/world/index.ts';
+    const { createWorld } = await import(/* @vite-ignore */ realWorld);
+    world = createWorld({ seed: base.seed, periodChunks: period });
+  }
+
+  const opts = {};
+  if (q.has('grow')) opts.holeGrow = Number(q.get('grow'));
+  if (q.has('probe')) opts.gridProbe = q.get('probe');
+  if (q.has('grid')) opts.gridLines = q.get('grid');
+  if (q.has('fault')) opts.fault = q.get('fault');
+  const terrain = createTerrainLayer(opts);
+
+  // Times the layer's own per-frame work, which is row streaming plus uniforms. Tests reset the array.
+  const frameMs = [];
+  const innerFrame = terrain.frame;
+  terrain.frame = (v) => {
+    const t0 = performance.now();
+    innerFrame(v);
+    frameMs.push(performance.now() - t0);
+  };
+  // The shell's own default post stack, built here so that msaa=<n> can call forceMsaa before the composer exists (DI-73(2)): the
+  // page then never allocates a buffer at another sample count. The tier's profile, and with it size, bloom levels and post variant,
+  // reaches the stack unchanged. postState records what the stack was given, so a test can show which chain it ran.
+  const post = createDevPost();
+  const postState = { quality: null, variant: null, msaa: null };
+  const { setQuality, forceVariant, forceMsaa } = post;
+  post.setQuality = (p) => { postState.quality = p; setQuality(p); };
+  post.forceVariant = (v) => { postState.variant = v; forceVariant(v); };
+  post.forceMsaa = (n) => { postState.msaa = n; forceMsaa(n); };
+  const msaa = Number(q.get('msaa'));
+  if (q.has('msaa') && (msaa === 0 || msaa === 2 || msaa === 4)) post.forceMsaa(msaa);
+
+  window.__terrain = { layer: terrain, frameMs, readHdr, postState };
+
+  const layers = q.get('sky') === '0' ? [terrain] : [createStandInSky(), terrain];
+  startDevShell(layers, post, { world });
+</script>
+</body>
+</html>

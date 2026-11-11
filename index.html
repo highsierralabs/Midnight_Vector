@@ -1,0 +1,52 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<title>Midnight Vector</title>
+<meta name="description" content="An endless 80s synthwave road, running in your browser.">
+<meta name="theme-color" content="#0D0221">
+<link rel="icon" href="data:,">
+<script>document.documentElement.setAttribute("data-mv-boot", "pending");</script>
+<style>
+html, body { margin: 0; height: 100%; overflow: hidden; overscroll-behavior: none; background: #0D0221; }
+#mv-stage { position: fixed; inset: 0; }
+#mv-stage canvas { display: block; touch-action: none; }
+#mv-ui { position: fixed; inset: 0; pointer-events: none; }
+#mv-poster { position: fixed; inset: 0; overflow: hidden; pointer-events: none;
+  background: linear-gradient(180deg, #0D0221 0, #1f0845 22vh, #3A0F6B 36vh, #a01f72 48vh, #FD3777 54.5vh, #0D0221 54.5vh); }
+#mv-poster .sun { position: absolute; left: 50%; top: 43.3vh; width: 38.8vh; height: 38.8vh; transform: translate(-50%, -50%); border-radius: 50%;
+  background: linear-gradient(180deg, #FFD319 0, #FFD319 30%, #FF7A3C 62%, #F6019D 100%);
+  box-shadow: 0 0 9vh rgba(253, 55, 119, .45);
+  -webkit-mask-image: linear-gradient(180deg, #000 0, #000 52%, transparent 52%, transparent 54%, #000 54%, #000 60%, transparent 60%, transparent 63%, #000 63%, #000 69%, transparent 69%, transparent 73%, #000 73%, #000 79%, transparent 79%, transparent 84%, #000 84%);
+          mask-image: linear-gradient(180deg, #000 0, #000 52%, transparent 52%, transparent 54%, #000 54%, #000 60%, transparent 60%, transparent 63%, #000 63%, #000 69%, transparent 69%, transparent 73%, #000 73%, #000 79%, transparent 79%, transparent 84%, #000 84%); }
+#mv-poster .floor { z-index: 0; isolation: isolate; position: absolute; left: 0; right: 0; top: 54.5vh; bottom: 0; overflow: hidden; background: #0D0221; }
+#mv-poster .grid { position: absolute; inset: 0; width: 100%; height: 100%; }
+#mv-poster .grid path { fill: none; stroke: #F6019D; stroke-width: 2px; vector-effect: non-scaling-stroke; }
+#mv-poster .floor::after { content: ""; position: absolute; inset: 0; background: linear-gradient(180deg, rgba(253, 55, 119, .55) 0, rgba(13, 2, 33, 0) 14vh); }
+#mv-poster .copy { z-index: 1; position: absolute; left: 50%; bottom: max(3vh, env(safe-area-inset-bottom)); transform: translateX(-50%); box-sizing: border-box; width: min(44em, 92vw); padding: .9em 1.2em; border: 2px solid #2DE2E6; background: rgba(10, 3, 30, .8); text-align: center; color: #EAF6FF; font: 700 clamp(12px, min(2.2vh, 3.4vw), 20px) / 1.45 "Courier New", ui-monospace, monospace; text-shadow: 0 1px 0 #000, 0 0 3px #000; }
+#mv-poster h1 { margin: 0 0 .5em; font-size: clamp(20px, min(5.5vh, 7.5vw), 56px); letter-spacing: .08em; color: #fff; text-shadow: 0 0 .3em #2DE2E6, 0 0 .8em #F6019D; }
+#mv-poster p { margin: .3em auto 0; max-width: 42em; }
+html[data-mv-boot="loading"] #mv-poster .copy { display: none; }
+/* DI-104: with script on, the caption waits 10 s for main.ts, which sets loading, unsupported or failed. Without this it
+   painted for a frame or two before the module ran. Without script it shows at once; if the module never runs, after 10 s. */
+html[data-mv-boot="pending"] #mv-poster .copy { visibility: hidden; animation: mv-late-copy 0s 10s forwards; }
+@keyframes mv-late-copy { to { visibility: visible; } }
+html[data-mv-boot="running"] #mv-poster { display: none; }
+</style>
+</head>
+<body>
+<div id="mv-stage"></div>
+<div id="mv-poster">
+  <div class="sun"></div>
+  <div class="floor"><svg class="grid" viewBox="-100 0 200 100" preserveAspectRatio="none" aria-hidden="true"><path d="M0 0L-480 100M0 0L-440 100M0 0L-400 100M0 0L-360 100M0 0L-320 100M0 0L-280 100M0 0L-240 100M0 0L-200 100M0 0L-160 100M0 0L-120 100M0 0L-80 100M0 0L-40 100M0 0L0 100M0 0L40 100M0 0L80 100M0 0L120 100M0 0L160 100M0 0L200 100M0 0L240 100M0 0L280 100M0 0L320 100M0 0L360 100M0 0L400 100M0 0L440 100M0 0L480 100M-100 1.5H100M-100 3H100M-100 5H100M-100 8H100M-100 12H100M-100 18H100M-100 27H100M-100 41H100M-100 62H100M-100 95H100"/></svg></div>
+  <div class="copy">
+    <h1 id="mv-poster-title">MIDNIGHT VECTOR</h1>
+    <p>An endless 80s synthwave road, running in your browser.</p>
+    <p id="mv-poster-msg">It needs JavaScript and WebGL2 with floating-point render targets. If this picture never starts moving, this browser or device could not start it.</p>
+  </div>
+</div>
+<div id="mv-ui"></div>
+<script type="module" src="/src/main.ts"></script>
+</body>
+</html>

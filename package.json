@@ -1,0 +1,44 @@
+{
+  "name": "midnight-vector",
+  "version": "0.0.0",
+  "private": true,
+  "type": "module",
+  "engines": {
+    "node": ">=24.14.1 <25"
+  },
+  "dependencies": {
+    "postprocessing": "6.39.6",
+    "three": "0.187.0"
+  },
+  "devDependencies": {
+    "@types/node": "24.19.2",
+    "@types/three": "0.187.0",
+    "eslint": "10.14.0",
+    "playwright": "1.64.1",
+    "typescript": "6.0.3",
+    "typescript-eslint": "8.72.1",
+    "vite": "8.3.5",
+    "vitest": "5.1.0"
+  },
+  "scripts": {
+    "dev": "vite",
+    "build": "vite build",
+    "preview": "vite preview",
+    "typecheck": "tsc --noEmit -p tsconfig.json && tsc --noEmit -p tsconfig.node.json",
+    "lint": "eslint . --max-warnings 0",
+    "test": "vitest run",
+    "glsl:check": "node scripts/glsl-gate.ts",
+    "contracts:check": "node scripts/contracts-check.ts",
+    "check": "npm run typecheck && npm run lint && npm test && npm run glsl:check",
+    "check:task": "node scripts/check-task.ts",
+    "plans:check": "node scripts/plans-check.ts",
+    "build:proof": "vite build --config tests/support/buildproof/vite.config.ts",
+    "test:foundation": "playwright test tests/support --project=gpu --project=gpu-timing --project=software --project=no-webgl",
+    "test:smoke": "playwright test tests/e2e --project=gpu",
+    "test:browser": "playwright test tests/support tests/visual tests/e2e --project=gpu --project=no-webgl",
+    "test:software": "playwright test tests/visual tests/e2e --project=software",
+    "test:forever": "playwright test tests/forever --project=gpu --project=gpu-timing",
+    "test:perf": "playwright test tests/perf --project=gpu-timing --project=software",
+    "test:art": "playwright test tests/art --project=gpu"
+  }
+}

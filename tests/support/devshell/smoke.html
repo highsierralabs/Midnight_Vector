@@ -1,0 +1,41 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <title>Dev shell smoke</title>
+  <link rel="icon" href="data:,">
+</head>
+<body>
+<script type="module">
+  import { startDevShell } from '/src/testing/devShell.ts';
+  import { createDevPost } from '/src/testing/devPost.ts';
+  import { createFakeWorld } from '/src/testing/fakeWorld.ts';
+  import { fakeProfile } from '/src/testing/scriptedFrame.ts';
+  import { createTrivialLayer } from '/tests/support/devshell/trivialLayer.ts';
+
+  const q = new URLSearchParams(location.search);
+  let post;
+  if (q.get('recordpost') === '1') {
+    const inner = createDevPost();
+    const log = (window.__postLog = []);
+    post = new Proxy(inner, {
+      get(target, name) {
+        const v = target[name];
+        return typeof v === 'function' ? (...args) => { log.push(String(name)); return v.apply(target, args); } : v;
+      },
+    });
+    window.__post = post;
+    window.__fakeProfile = fakeProfile;
+  }
+  // ?markworld=1 passes a world whose bend is marked, so a test can tell it from the shell's default world.
+  const options = {};
+  if (q.get('markworld') === '1') {
+    const base = createFakeWorld();
+    options.world = { ...base, bendAt: (at, out) => { base.bendAt(at, out); out.vMax = 1200; return out; } };
+  }
+  // ?otier=<n> passes a tier through startDevShell's options, which ?tier outranks.
+  if (q.has('otier')) options.tier = Number(q.get('otier'));
+  startDevShell([createTrivialLayer()], post, options);
+</script>
+</body>
+</html>

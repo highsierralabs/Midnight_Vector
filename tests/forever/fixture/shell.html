@@ -1,0 +1,19 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <title>Harness shell target</title>
+  <link rel="icon" href="data:,">
+</head>
+<body style="margin:0;background:#000">
+<script type="module">
+  import { createHarness } from '/src/harness/index.ts';
+  import { createShellHost } from '/tests/forever/fixture/shellHost.ts';
+
+  createShellHost().then((host) => {
+    createHarness(host);
+    console.info('MV_READY');
+  }).catch((e) => { console.error(`shell target: ${String(e)}`); });
+</script>
+</body>
+</html>

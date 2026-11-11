@@ -1,0 +1,928 @@
+/* Midnight Vector UI. Every size is an em of --mv-u. Loaded as ?inline, in one <style>, so it needs no request. */
+
+.mv-ui, .mv-fatal {
+  --mv-u: clamp(11px, calc(.5vw + .75vh), 20px);
+  --mv-mono: "Courier New", ui-monospace, monospace;
+  --mv-display: "Arial Black", "Segoe UI Black", Impact, Roboto, "Helvetica Neue", system-ui, sans-serif;
+  --mv-accent: #2DE2E6;
+  --mv-hot: #FF7FD0;
+  --mv-sun: #FFD319;
+  --mv-text: #EAF6FF;
+  --mv-panel: rgba(10, 3, 30, .8);
+  --mv-halo: 0 1px 0 #000, 0 0 3px #000;
+  --mv-gutter: .9em;
+  font-family: var(--mv-mono);
+  font-weight: 700;
+  font-size: var(--mv-u);
+  line-height: 1.15;
+  color: var(--mv-text);
+}
+
+.mv-ui {
+  position: fixed;
+  inset: 0;
+  overflow: hidden;
+  pointer-events: none;
+  -webkit-user-select: none;
+  user-select: none;
+}
+
+.mv-ui *, .mv-fatal * { box-sizing: border-box; }
+
+/* The one rule outside the UI's subtree: nothing to aim at during play, because the ship is the feedback. */
+html[data-mv-mode="play"] canvas { cursor: none; }
+
+/* Which panels show comes only from data-view. */
+.mv-title, .mv-hud, .mv-popups, .mv-banner, .mv-auto, .mv-lost, .mv-ctx, .mv-cruise { display: none; }
+.mv-ui[data-view~="title"] > .mv-title { display: flex; }
+.mv-ui[data-view~="hud"] > .mv-hud { display: grid; }
+.mv-ui[data-view~="hud"] > .mv-popups { display: block; }
+.mv-ui[data-view~="hud"] > .mv-banner[data-show="1"] { display: block; }
+.mv-ui[data-view~="auto"] > .mv-auto { display: block; }
+.mv-ui[data-view~="lost"] > .mv-lost { display: block; }
+.mv-ui[data-view~="ctx"] > .mv-ctx { display: flex; }
+.mv-ui[data-view~="menu"] > .mv-cruise { display: flex; }
+
+/* D-012: a fresh browser's first draw of the HUD and of the menu cost frames of 26 to 62 ms, with the main thread idle.
+   So both are laid out and drawn during DEMO, each on a layer of its own, at an opacity no one can see, and the launch
+   changes only that layer's opacity. Opacity 0 and visibility: hidden are skipped by the compositor, so they draw
+   nothing ahead and save nothing; .001 is drawn and stays under half a level on any 8-bit pixel. The menu is drawn in
+   DEMO only, and without its full-screen scrim, a plain fill, so DEMO composites only the card: after that its first
+   open costs no more than a later one. index.ts keeps both inert and aria-hidden in the same write as data-view, and
+   the context-lost layer still hides by display (T09's B12). */
+.mv-hud, .mv-cruise { will-change: opacity; }
+.mv-ui[data-view~="title"] > .mv-hud { display: grid; opacity: .001; }
+.mv-ui[data-view~="title"] > .mv-cruise { display: flex; opacity: .001; background: none; }
+.mv-ui[data-view~="title"] > .mv-hud,
+.mv-ui[data-view~="title"] > .mv-hud *,
+.mv-ui[data-view~="title"] > .mv-cruise,
+.mv-ui[data-view~="title"] > .mv-cruise * { pointer-events: none; }
+
+/* Reduced motion: every animation and transition off, whatever the OS says, because the menu can override it. */
+.mv-ui[data-reduced="1"],
+.mv-ui[data-reduced="1"] *,
+.mv-ui[data-reduced="1"] *::before,
+.mv-ui[data-reduced="1"] *::after {
+  animation: none !important;
+  transition: none !important;
+}
+
+.mv-ui .mv-if-coarse, .mv-ui .mv-if-loading { display: none; }
+@media (pointer: coarse) {
+  .mv-ui .mv-if-fine { display: none; }
+  .mv-ui span.mv-if-coarse { display: inline; }
+  .mv-ui .mv-legend.mv-if-coarse { display: flex; }
+}
+
+/* DI-95: until T10's html[data-mv-boot] reads running, the prompt says LOADING in place of either prompt, and index.ts
+   ignores a launch. A page with no such attribute has no boot to wait for. */
+html[data-mv-boot]:not([data-mv-boot="running"]) .mv-ui .mv-launch > span { display: none; }
+html[data-mv-boot]:not([data-mv-boot="running"]) .mv-ui .mv-launch > .mv-if-loading { display: inline; }
+html[data-mv-boot]:not([data-mv-boot="running"]) .mv-ui .mv-title { cursor: progress; }
+html[data-mv-boot]:not([data-mv-boot="running"]) .mv-ui .mv-launch {
+  color: #cfe0ff;
+  border-color: rgba(45, 226, 230, .5);
+  box-shadow: none;
+  cursor: progress;
+}
+
+.mv-ui :focus { outline: none; }
+.mv-ui :focus-visible, .mv-fatal :focus-visible {
+  outline: 3px solid var(--mv-sun);
+  outline-offset: 3px;
+}
+
+/* :where, so this reset cannot outrank a button's own class. */
+:where(.mv-ui, .mv-fatal) button {
+  font: inherit;
+  color: inherit;
+  background: none;
+  border: 0;
+  margin: 0;
+  padding: 0;
+  cursor: pointer;
+  -webkit-tap-highlight-color: transparent;
+}
+
+/* ---- title ---- */
+
+.mv-title {
+  position: absolute;
+  inset: 0;
+  flex-direction: column;
+  justify-content: space-between;
+  align-items: center;
+  gap: 1em;
+  padding:
+    max(env(safe-area-inset-top, 0px), 3.2vh)
+    max(env(safe-area-inset-right, 0px), 3vw)
+    max(env(safe-area-inset-bottom, 0px), 3.2vh)
+    max(env(safe-area-inset-left, 0px), 3vw);
+  pointer-events: auto;
+  touch-action: none;
+  cursor: pointer;
+  background:
+    linear-gradient(180deg, rgba(13, 2, 33, .5) 0, rgba(13, 2, 33, 0) 26%),
+    linear-gradient(0deg, rgba(13, 2, 33, .78) 0, rgba(13, 2, 33, .5) 16%, rgba(13, 2, 33, 0) 36%);
+}
+
+.mv-wordmark {
+  margin: 0;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  font-family: var(--mv-display);
+  font-weight: 900;
+  line-height: .98;
+  transform: skewX(-11deg);
+  white-space: nowrap;
+  filter:
+    drop-shadow(0 .02em 0 #1b1140)
+    drop-shadow(0 0 .12em rgba(45, 226, 230, .75))
+    drop-shadow(0 0 .3em rgba(246, 1, 157, .55));
+}
+
+/* Upright glyphs under the parent's skew. font-style: italic leaves part of a glyph outside its clip box. */
+.mv-wm {
+  display: block;
+  padding: 0 .06em;
+  background: linear-gradient(180deg, #e8fbff 0%, #9fe3ff 22%, #fff 44%, #1b1140 49%, #2a1a66 51%, #ff4fb0 58%, #ffd3ef 78%, #fff 100%);
+  -webkit-background-clip: text;
+  background-clip: text;
+  color: transparent;
+  -webkit-text-stroke: .012em rgba(255, 255, 255, .75);
+}
+.mv-wm-top { font-size: min(14vw, 17vh); letter-spacing: .015em; }
+.mv-wm-bottom { font-size: min(10.5vw, 13vh); letter-spacing: .2em; margin-right: -.2em; margin-top: -.04em; }
+
+@media (forced-colors: active) {
+  .mv-wordmark { filter: none; }
+  /* No backplate: the second line's would paint over the first line's feet. */
+  .mv-wm {
+    forced-color-adjust: none;
+    background: none;
+    color: CanvasText;
+    -webkit-text-stroke: 0;
+  }
+}
+
+.mv-title-bottom {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: .62em;
+  text-align: center;
+  max-width: 100%;
+}
+
+.mv-tagline {
+  margin: 0;
+  font-size: 1.2em;
+  letter-spacing: .34em;
+  margin-right: -.34em;
+  color: var(--mv-text);
+  text-shadow: var(--mv-halo), 0 0 .7em var(--mv-hot);
+}
+
+.mv-best {
+  margin: 0;
+  font-size: 1.05em;
+  letter-spacing: .06em;
+  color: var(--mv-sun);
+  text-shadow: var(--mv-halo), 0 0 .6em rgba(255, 211, 25, .6);
+}
+
+.mv-launch {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  min-height: max(3.1em, 44px);
+  min-width: 44px;
+  padding: .55em 2.2em;
+  font-size: 1.45em;
+  letter-spacing: .16em;
+  color: var(--mv-text);
+  background: var(--mv-panel);
+  border: 2px solid var(--mv-accent);
+  transform: skewX(-11deg);
+  box-shadow: 0 0 .7em -.05em var(--mv-accent), inset 0 0 .9em -.3em var(--mv-accent);
+  text-shadow: var(--mv-halo), 0 0 .6em var(--mv-accent);
+  white-space: nowrap;
+}
+.mv-launch > span { transform: skewX(11deg); }
+.mv-title .mv-launch:hover { background: rgba(45, 226, 230, .22); }
+
+.mv-legend {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: center;
+  gap: .2em 1.5em;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+  font-size: .95em;
+  letter-spacing: .04em;
+  text-shadow: var(--mv-halo);
+}
+.mv-legend b { color: var(--mv-accent); }
+
+/* The prompt stays. Everything else fades, so an idle page serves as a screensaver. */
+.mv-title-bottom > :not(.mv-launch) { transition: opacity 1.6s; }
+.mv-title[data-attract="1"] .mv-title-bottom > :not(.mv-launch) { opacity: 0; }
+
+/* ---- HUD ---- */
+
+.mv-hud {
+  position: absolute;
+  top: calc(env(safe-area-inset-top, 0px) + var(--mv-gutter));
+  bottom: calc(env(safe-area-inset-bottom, 0px) + var(--mv-gutter));
+  /* Wider than 16:9 the readouts stay in a central 16:9 box, inside the eye's reach. */
+  left: calc(max(env(safe-area-inset-left, 0px), calc((100vw - 177.78vh) / 2)) + var(--mv-gutter));
+  right: calc(max(env(safe-area-inset-right, 0px), calc((100vw - 177.78vh) / 2)) + var(--mv-gutter));
+  grid-template-areas:
+    "score . dist"
+    ". . boost"
+    ". vitals menu";
+  grid-template-columns: minmax(0, 1fr) minmax(0, 34em) minmax(0, 1fr);
+  grid-template-rows: auto 1fr auto;
+  gap: .7em;
+}
+
+.mv-panel {
+  position: relative;
+  isolation: isolate;
+  padding: .5em .9em;
+}
+/* The neon edge is a skewed layer, so the text stays upright and its box stays honest. */
+.mv-panel::before {
+  content: "";
+  position: absolute;
+  inset: 0;
+  z-index: -1;
+  transform: skewX(-7deg);
+  background: var(--mv-panel);
+  border: 2px solid var(--mv-accent);
+  /* A wider inset glow raised the background behind the labels enough to fail contrast over white. */
+  box-shadow: 0 0 .6em -.1em var(--mv-accent), inset 0 0 .5em -.32em var(--mv-accent);
+}
+
+.mv-label {
+  font-size: max(.82em, 10px);
+  letter-spacing: .14em;
+  color: var(--mv-accent);
+  text-shadow: var(--mv-halo);
+  white-space: nowrap;
+}
+
+.mv-box-score {
+  grid-area: score;
+  justify-self: start;
+  align-self: start;
+  display: grid;
+  grid-template-columns: auto auto;
+  grid-template-rows: auto auto;
+  grid-auto-flow: column;
+  column-gap: .9em;
+  row-gap: .05em;
+  align-items: end;
+}
+/* Each label sits over its own value, and a screen reader hears the same order. */
+.mv-syncrow { display: contents; }
+
+.mv-score {
+  font-size: min(2.7em, 7.4vw);
+  line-height: 1;
+  letter-spacing: .02em;
+  font-variant-numeric: tabular-nums;
+  color: #fff;
+  white-space: nowrap;
+  text-shadow: var(--mv-halo), 0 0 .35em var(--mv-accent);
+}
+.mv-score[data-long="1"] { font-size: min(2.2em, 6vw); }
+
+.mv-sync {
+  display: inline-block;
+  min-width: 2.3ch;
+  font-size: 1.9em;
+  line-height: 1;
+  color: var(--mv-hot);
+  white-space: nowrap;
+  text-shadow: var(--mv-halo), 0 0 .4em var(--mv-hot);
+  transform-origin: 50% 70%;
+}
+.mv-sync[data-beat="a"] { animation: mv-kick-a .36s ease-out; }
+.mv-sync[data-beat="b"] { animation: mv-kick-b .36s ease-out; }
+/* Two identical rules: flipping between them restarts the kick with no reflow. */
+@keyframes mv-kick-a { from { transform: scale(1.24); } to { transform: scale(1); } }
+@keyframes mv-kick-b { from { transform: scale(1.24); } to { transform: scale(1); } }
+
+.mv-box-dist {
+  grid-area: dist;
+  justify-self: end;
+  align-self: start;
+  display: flex;
+  flex-direction: column;
+  align-items: flex-end;
+  gap: .16em;
+  text-align: right;
+  white-space: nowrap;
+  min-width: 0;
+  max-width: 100%;
+}
+.mv-kmrow { display: flex; align-items: baseline; gap: .4em; }
+.mv-km {
+  font-size: 1.9em;
+  line-height: 1;
+  font-variant-numeric: tabular-nums;
+  color: #fff;
+  text-shadow: var(--mv-halo), 0 0 .35em var(--mv-accent);
+}
+.mv-sector { font-size: 1em; color: var(--mv-accent); text-shadow: var(--mv-halo); }
+.mv-objective { font-size: 1em; color: var(--mv-sun); text-shadow: var(--mv-halo); }
+
+.mv-box-boost { grid-area: boost; justify-self: end; align-self: end; }
+.mv-boost {
+  display: none;
+  width: 84px;
+  height: 84px;
+  border-radius: 50%;
+  align-items: center;
+  justify-content: center;
+  font-size: max(.9em, 11px);
+  letter-spacing: .08em;
+  color: #fff;
+  background: rgba(10, 3, 30, .55);
+  border: 2px solid var(--mv-hot);
+  box-shadow: 0 0 .9em -.1em var(--mv-hot), inset 0 0 1.2em -.4em var(--mv-hot);
+  text-shadow: var(--mv-halo);
+  pointer-events: auto;
+  touch-action: none;
+}
+@media (pointer: coarse) {
+  .mv-boost { display: flex; }
+}
+.mv-ui .mv-boost:active { background: rgba(255, 127, 208, .35); }
+
+.mv-vitals {
+  grid-area: vitals;
+  align-self: end;
+  display: flex;
+  align-items: center;
+  gap: 1.3em;
+}
+.mv-shieldrow { flex: none; display: flex; flex-direction: column; gap: .35em; }
+.mv-odrow { flex: 1 1 auto; min-width: 0; display: flex; flex-direction: column; gap: .35em; }
+
+.mv-pips { display: flex; gap: .4em; padding: 0 .15em; }
+.mv-pip {
+  display: block;
+  width: 1.75em;
+  height: .95em;
+  transform: skewX(-20deg);
+  border: 2px solid var(--mv-accent);
+  background: transparent;
+}
+/* Filled against outlined, so state does not rest on colour. */
+.mv-pips[data-n="1"] .mv-pip:nth-child(-n+1),
+.mv-pips[data-n="2"] .mv-pip:nth-child(-n+2),
+.mv-pips[data-n="3"] .mv-pip:nth-child(-n+3) {
+  background: var(--mv-accent);
+  box-shadow: 0 0 .3em var(--mv-accent);
+}
+.mv-pips[data-n="1"] { --mv-accent: var(--mv-hot); }
+.mv-pips[data-n="0"] { --mv-accent: var(--mv-hot); }
+.mv-pips[data-ghost="1"] { animation: mv-ghost .7s steps(1) infinite; }
+.mv-pips[data-ghost="1"] .mv-pip { border-style: dashed; }
+@keyframes mv-ghost { 0% { opacity: 1; } 50% { opacity: .45; } }
+
+.mv-od {
+  position: relative;
+  height: .95em;
+  margin: 0 .3em;
+  transform: skewX(-20deg);
+  border: 2px solid var(--mv-accent);
+  background: rgba(0, 0, 0, .55);
+  overflow: hidden;
+}
+.mv-od-fill {
+  position: absolute;
+  inset: 0;
+  transform-origin: 0 50%;
+  transform: scaleX(0);
+  background: linear-gradient(90deg, #2DE2E6, #B026FF 55%, #F6019D 80%, #FFD319);
+}
+.mv-od::after {
+  content: "";
+  position: absolute;
+  inset: 0;
+  background: repeating-linear-gradient(90deg, transparent 0, transparent calc(6.25% - 2px), rgba(0, 0, 0, .75) calc(6.25% - 2px), rgba(0, 0, 0, .75) 6.25%);
+}
+
+.mv-box-menu {
+  grid-area: menu;
+  justify-self: end;
+  align-self: end;
+  display: flex;
+  align-items: center;
+  gap: .6em;
+}
+.mv-chip {
+  display: none;
+  padding: .3em .55em;
+  font-size: max(.82em, 10px);
+  letter-spacing: .12em;
+  color: #fff;
+  background: var(--mv-panel);
+  border: 2px solid var(--mv-hot);
+  text-shadow: var(--mv-halo);
+}
+.mv-ui[data-muted="1"] .mv-chip { display: block; }
+
+.mv-menu-button {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  min-width: 2.6em;
+  min-height: 2.6em;
+  font-size: 1.1em;
+  letter-spacing: .08em;
+  color: var(--mv-text);
+  background: var(--mv-panel);
+  border: 2px solid var(--mv-accent);
+  transform: skewX(-7deg);
+  box-shadow: 0 0 .6em -.1em var(--mv-accent);
+  pointer-events: auto;
+  touch-action: manipulation;
+}
+.mv-ui .mv-menu-button:hover { background: rgba(45, 226, 230, .22); }
+@media (pointer: coarse) {
+  .mv-menu-button { min-width: 44px; min-height: 44px; }
+}
+/* VI-game: II sits in the mouse's saturated corner, where the cursor is hidden during play, so a click meant as boost
+   opened CRUISE. Under a fine pointer it takes no mouse press in PLAY, and the press reaches the canvas as boost; Esc
+   and P open CRUISE, as the legend says, and Tab and Enter still reach II. A touch screen keeps the button. */
+@media (pointer: fine) {
+  html[data-mv-mode="play"] .mv-ui .mv-menu-button { pointer-events: none; }
+}
+
+@media (max-aspect-ratio: 1/1) {
+  .mv-hud {
+    grid-template-areas:
+      "score dist"
+      ". ."
+      "menu boost"
+      "vitals vitals";
+    grid-template-columns: minmax(0, 1fr) minmax(0, 1fr);
+    grid-template-rows: auto 1fr auto auto;
+  }
+  .mv-box-menu { justify-self: start; }
+  .mv-box-score { grid-template-columns: auto; grid-template-rows: none; grid-auto-flow: row; row-gap: .2em; }
+  .mv-syncrow { display: flex; align-items: baseline; gap: .4em; }
+}
+
+/* Amendment FH, HIDE HUD (FH-10 to FH-14): the readouts, the BOOST box, the MUTED chip, the popups and the sector banner
+   leave the road. II stays, on a touch screen the only way back to the menu, and so do the notices and the live region.
+   visibility, so II can stay visible inside the hidden HUD, and hidden boxes leave hit-testing and the accessibility tree.
+   Never in the title view, where D-012 keeps the warm HUD drawn. */
+.mv-ui[data-hide-hud="1"]:not([data-view~="title"]) > .mv-hud .mv-panel,
+.mv-ui[data-hide-hud="1"]:not([data-view~="title"]) > .mv-hud .mv-box-boost,
+.mv-ui[data-hide-hud="1"]:not([data-view~="title"]) > .mv-hud .mv-chip,
+.mv-ui[data-hide-hud="1"]:not([data-view~="title"]) > .mv-popups,
+.mv-ui[data-hide-hud="1"]:not([data-view~="title"]) > .mv-banner { visibility: hidden; }
+/* DI-119 (the operator's HC13), superseding FH-12: with the HUD hidden II is dimmed, and full again under a pointer, a
+   press or keyboard focus, so a keyboard user still sees where focus is. Hover only where hover is real, so a tap on
+   a touch screen does not leave it lit. */
+.mv-ui[data-hide-hud="1"]:not([data-view~="title"]) > .mv-hud .mv-menu-button { opacity: .5; }
+.mv-ui[data-hide-hud="1"]:not([data-view~="title"]) > .mv-hud .mv-menu-button:is(:active, :focus-visible) { opacity: 1; }
+@media (hover: hover) {
+  .mv-ui[data-hide-hud="1"]:not([data-view~="title"]) > .mv-hud .mv-menu-button:hover { opacity: 1; }
+}
+
+/* ---- popups, banner, tag ---- */
+
+.mv-popups {
+  position: absolute;
+  left: 0;
+  right: 0;
+  top: 64%;
+  height: 2.2em;
+  overflow: visible;
+}
+.mv-popup {
+  position: absolute;
+  top: 0;
+  transform: translateX(-50%);
+  opacity: 0;
+  isolation: isolate;
+  padding: .06em .42em .1em;
+  font-size: 1.9em;
+  white-space: nowrap;
+  color: var(--mv-accent);
+  text-shadow: var(--mv-halo), 0 0 .5em currentColor;
+}
+/* VI-game: with only the 3 px halo, HIT read p10 1.19 over the real scene. A dark plate in the panels' own fill and skew
+   keeps every popup at 3:1 or more over any backdrop, white included, the brightest there is (A23). It moves with the
+   popup, so the animation is still transform and opacity only. No outer glow: the plate stays inside the popup's own
+   box, so a rising popup leaves the band below it as soon as the text alone did (section 10, T10's A18n). */
+.mv-popup::before {
+  content: "";
+  position: absolute;
+  inset: 0;
+  z-index: -1;
+  transform: skewX(-7deg);
+  background: var(--mv-panel);
+  border-bottom: 2px solid currentColor;
+}
+.mv-popup:nth-child(1) { left: 34%; }
+.mv-popup:nth-child(2) { left: 66%; }
+.mv-popup:nth-child(3) { left: 26%; }
+.mv-popup:nth-child(4) { left: 74%; }
+.mv-popup:nth-child(5) { left: 42%; }
+.mv-popup:nth-child(6) { left: 58%; }
+.mv-popup[data-k^="gain"] { color: #fff; }
+.mv-popup[data-k^="graze"] { color: var(--mv-sun); }
+.mv-popup[data-k^="miss"] { color: #ff9a9a; }
+.mv-popup[data-k^="hit"] { color: #ff5a7a; font-size: 2.3em; }
+.mv-popup[data-k^="grade"] { color: #fff; font-size: 2.3em; }
+.mv-popup[data-k$="-a"] { animation: mv-pop-a .9s ease-out; }
+.mv-popup[data-k$="-b"] { animation: mv-pop-b .9s ease-out; }
+.mv-popup[data-k$="-r"] { opacity: 1; }
+/* Two identical rules, for the same reason as the kick. transform and opacity only. */
+@keyframes mv-pop-a {
+  0% { opacity: 0; transform: translate(-50%, .5em) scale(.8); }
+  14% { opacity: 1; transform: translate(-50%, 0) scale(1.08); }
+  70% { opacity: 1; }
+  100% { opacity: 0; transform: translate(-50%, -2.2em) scale(1); }
+}
+@keyframes mv-pop-b {
+  0% { opacity: 0; transform: translate(-50%, .5em) scale(.8); }
+  14% { opacity: 1; transform: translate(-50%, 0) scale(1.08); }
+  70% { opacity: 1; }
+  100% { opacity: 0; transform: translate(-50%, -2.2em) scale(1); }
+}
+
+.mv-banner {
+  position: absolute;
+  top: max(15%, 6.4em);
+  left: 50%;
+  transform: translateX(-50%);
+  width: max-content;
+  max-width: min(92vw, 56em);
+  padding: .6em 1.6em;
+  text-align: center;
+  background: var(--mv-panel);
+  border-top: 2px solid var(--mv-accent);
+  border-bottom: 2px solid var(--mv-accent);
+  box-shadow: 0 0 1em -.2em var(--mv-accent);
+}
+.mv-banner-title {
+  text-wrap: balance;
+  font-size: 1.25em;
+  letter-spacing: .1em;
+  color: #fff;
+  text-shadow: var(--mv-halo), 0 0 .5em var(--mv-accent);
+}
+.mv-banner-objective { margin-top: .25em; color: var(--mv-sun); text-shadow: var(--mv-halo); }
+.mv-banner-grade { color: var(--mv-hot); font-size: 1.15em; text-shadow: var(--mv-halo); }
+.mv-banner-grade:empty { display: none; }
+
+.mv-auto {
+  position: absolute;
+  top: calc(env(safe-area-inset-top, 0px) + var(--mv-gutter) + .2em);
+  left: 50%;
+  transform: translateX(-50%);
+  padding: .4em 1em;
+  font-size: 1em;
+  letter-spacing: .1em;
+  white-space: nowrap;
+  color: var(--mv-sun);
+  background: var(--mv-panel);
+  border: 2px solid var(--mv-sun);
+  text-shadow: var(--mv-halo);
+  box-shadow: 0 0 .7em -.1em var(--mv-sun);
+  animation: mv-tag 2.4s ease-in-out infinite;
+}
+@keyframes mv-tag { 0%, 100% { opacity: 1; } 50% { opacity: .68; } }
+/* DI-119 (the operator's HC12): the tag leaves a few seconds after it appears. visibility, so it also leaves hit-testing
+   and the accessibility tree; the live region has already announced it. The fade's keyframes hold it visible while it
+   runs. Reduced motion turns every animation off, so there it goes at once. */
+.mv-auto[data-show="0"] { visibility: hidden; animation: mv-tag-out .6s ease-in; }
+@keyframes mv-tag-out { from { opacity: 1; visibility: visible; } to { opacity: 0; visibility: visible; } }
+@media (max-aspect-ratio: 1/1) {
+  .mv-auto { top: calc(env(safe-area-inset-top, 0px) + 9.5em); letter-spacing: .04em; }
+  .mv-banner { top: calc(env(safe-area-inset-top, 0px) + 12em); }
+}
+
+.mv-lost {
+  position: absolute;
+  left: 0;
+  right: 0;
+  top: 33%;
+  padding: 1.1em 1em 1em;
+  text-align: center;
+  background: linear-gradient(90deg, rgba(10, 3, 30, 0), rgba(10, 3, 30, .86) 16%, rgba(10, 3, 30, .86) 84%, rgba(10, 3, 30, 0));
+  border-top: 2px solid rgba(255, 0, 60, .9);
+  border-bottom: 2px solid rgba(0, 240, 255, .9);
+}
+.mv-lost-head {
+  font-size: min(12.5vw, 19vh);
+  line-height: 1;
+  letter-spacing: .02em;
+  white-space: nowrap;
+  color: #fff;
+  text-shadow: -.05em 0 0 #ff003c, .05em 0 0 #00f0ff, 0 0 .4em rgba(255, 0, 60, .6);
+  animation: mv-flicker 1.6s steps(1) infinite;
+}
+/* Two drops per 1.6 s, so well under 3 Hz. */
+@keyframes mv-flicker {
+  0% { opacity: 1; transform: translateX(0); }
+  22% { opacity: .55; transform: translateX(-.05em); }
+  30% { opacity: 1; transform: translateX(0); }
+  68% { opacity: .7; transform: translateX(.04em); }
+  76% { opacity: 1; transform: translateX(0); }
+}
+.mv-lost-sub {
+  margin-top: .5em;
+  font-size: max(1.15em, min(2.4vw, 2.8vh));
+  letter-spacing: .16em;
+  color: var(--mv-sun);
+  text-shadow: var(--mv-halo);
+}
+
+.mv-ctx {
+  position: absolute;
+  inset: 0;
+  align-items: center;
+  justify-content: center;
+  padding: 1em;
+  background: rgba(13, 2, 33, .6);
+}
+.mv-ctx-text {
+  max-width: min(92vw, 46em);
+  text-wrap: balance;
+  padding: .8em 1.4em;
+  text-align: center;
+  font-size: 1.1em;
+  letter-spacing: .08em;
+  background: var(--mv-panel);
+  border: 2px solid var(--mv-accent);
+  text-shadow: var(--mv-halo);
+}
+
+/* One polite region, seen only by screen readers. */
+.mv-live {
+  position: absolute;
+  left: 0;
+  top: 0;
+  width: 1px;
+  height: 1px;
+  overflow: hidden;
+  clip-path: inset(50%);
+  white-space: nowrap;
+}
+
+/* ---- cruise menu ---- */
+
+.mv-cruise {
+  position: absolute;
+  inset: 0;
+  align-items: center;
+  justify-content: center;
+  padding:
+    max(env(safe-area-inset-top, 0px), .8em)
+    max(env(safe-area-inset-right, 0px), .8em)
+    max(env(safe-area-inset-bottom, 0px), .8em)
+    max(env(safe-area-inset-left, 0px), .8em);
+  background: rgba(13, 2, 33, .45);
+  pointer-events: auto;
+}
+
+.mv-card {
+  display: grid;
+  gap: 1em;
+  width: min(40em, 100%);
+  max-height: 100%;
+  overflow-y: auto;
+  touch-action: pan-y;
+  padding: 1.4em 1.7em;
+  background: rgba(10, 3, 30, .9);
+  border: 2px solid var(--mv-accent);
+  box-shadow: 0 0 1.4em -.2em var(--mv-accent), inset 0 0 2em -.8em var(--mv-accent);
+}
+
+.mv-card-head { display: flex; flex-direction: column; align-items: center; gap: .55em; text-align: center; }
+.mv-cruise-heading {
+  margin: 0;
+  font-size: 2.6em;
+  line-height: 1;
+  letter-spacing: .24em;
+  margin-right: -.24em;
+  color: #fff;
+  text-shadow: var(--mv-halo), 0 0 .4em var(--mv-accent), 0 0 1em var(--mv-hot);
+}
+.mv-cruise-tagline { font-size: .95em; letter-spacing: .26em; margin-right: -.26em; }
+
+.mv-resume {
+  align-self: stretch;
+  min-height: max(2.8em, 44px);
+  margin-top: .2em;
+  font-size: 1.2em;
+  letter-spacing: .2em;
+  color: #fff;
+  background: rgba(45, 226, 230, .16);
+  border: 2px solid var(--mv-accent);
+  transform: skewX(-7deg);
+  box-shadow: 0 0 .7em -.1em var(--mv-accent);
+  text-shadow: var(--mv-halo);
+}
+.mv-ui .mv-resume:hover { background: rgba(45, 226, 230, .32); }
+
+.mv-stats {
+  display: grid;
+  grid-template-columns: auto auto;
+  gap: .1em .9em;
+  margin: 0;
+  font-variant-numeric: tabular-nums;
+  white-space: nowrap;
+}
+.mv-stats dt { color: var(--mv-accent); text-align: right; }
+.mv-stats dd { margin: 0; text-align: left; color: var(--mv-text); }
+
+.mv-note { margin: 0; font-size: .92em; font-weight: 400; line-height: 1.25; color: #cfe0ff; max-width: 34em; }
+
+.mv-card-controls { display: flex; flex-direction: column; gap: .2em; }
+
+.mv-row { display: flex; align-items: center; gap: .9em; min-height: 2.5em; cursor: pointer; }
+.mv-slider .mv-label { flex: 0 0 4.5em; }
+
+.mv-range {
+  flex: 1 1 auto;
+  min-width: 0;
+  height: 2.5em;
+  margin: 0;
+  -webkit-appearance: none;
+  appearance: none;
+  background: transparent;
+  cursor: pointer;
+}
+.mv-range::-webkit-slider-runnable-track {
+  height: .55em;
+  background: linear-gradient(90deg, var(--mv-accent), var(--mv-hot));
+  border: 1px solid rgba(255, 255, 255, .55);
+  box-shadow: 0 0 .5em -.05em var(--mv-accent);
+}
+.mv-range::-webkit-slider-thumb {
+  -webkit-appearance: none;
+  width: 1.1em;
+  height: 1.7em;
+  margin-top: -.62em;
+  background: var(--mv-sun);
+  border: 2px solid #fff;
+  transform: skewX(-12deg);
+  box-shadow: 0 0 .6em var(--mv-sun);
+}
+.mv-range::-moz-range-track {
+  height: .55em;
+  background: linear-gradient(90deg, var(--mv-accent), var(--mv-hot));
+  border: 1px solid rgba(255, 255, 255, .55);
+}
+.mv-range::-moz-range-thumb {
+  width: 1.1em;
+  height: 1.7em;
+  border-radius: 0;
+  background: var(--mv-sun);
+  border: 2px solid #fff;
+  transform: skewX(-12deg);
+}
+
+.mv-check input, .mv-radio input {
+  flex: none;
+  width: 1.15em;
+  height: 1.15em;
+  margin: 0;
+  -webkit-appearance: none;
+  appearance: none;
+  background: rgba(0, 0, 0, .4);
+  border: 2px solid var(--mv-accent);
+  transform: skewX(-12deg);
+  cursor: pointer;
+}
+.mv-check input:checked, .mv-radio input:checked {
+  background: var(--mv-accent);
+  box-shadow: 0 0 .55em var(--mv-accent), inset 0 0 0 2px #0a031e;
+}
+/* VI-game: drawn as the checkboxes' skewed squares, the six radios read as six separate boxes. Round, with a dot when
+   chosen, they read as one choice of six; the boxes keep their square. */
+.mv-radio input { border-radius: 50%; transform: none; }
+.mv-radio input:checked { box-shadow: 0 0 .55em var(--mv-accent), inset 0 0 0 .2em #0a031e; }
+
+@media (forced-colors: active) {
+  .mv-check input, .mv-radio input { -webkit-appearance: auto; appearance: auto; }
+}
+
+.mv-quality { margin: .15em 0; padding: 0; border: 0; min-width: 0; }
+.mv-quality legend { padding: 0 0 .25em; }
+.mv-radios { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 0 .7em; }
+.mv-radio { display: flex; align-items: center; gap: .55em; min-height: 2.3em; cursor: pointer; white-space: nowrap; font-size: .95em; }
+/* Amendment FH (FH-1, FH-28): FULLSCREEN, HIDE HUD and REDUCED MOTION in one row on the radios' own columns and gap. Two
+   full rows made the card scroll on short landscape phones [P2]. nowrap, as the radios have, so a column too narrow for
+   its text shows as text past its label, which the geometry rows read, and never as a second line. */
+.mv-toggles { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 0 .7em; }
+.mv-toggles > .mv-check { white-space: nowrap; }
+/* FH-29: .mv-row's display: flex outranks the browser's own [hidden] rule, so without this a hidden FULLSCREEN still drew. */
+.mv-ui .mv-toggles > [hidden] { display: none; }
+@media (max-width: 480px) {
+  .mv-radios, .mv-toggles { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+}
+
+@media (pointer: coarse) {
+  .mv-row, .mv-radio { min-height: 44px; }
+  .mv-range { height: 44px; }
+}
+
+@media (max-height: 480px) {
+  /* Too short for two lines and the bottom block, so one line, which also keeps it wide enough to carry the screen. */
+  .mv-wordmark { flex-direction: row; align-items: baseline; gap: .22em; font-size: min(7.1vw, 17vh); }
+  .mv-wm-top, .mv-wm-bottom { font-size: inherit; letter-spacing: .015em; margin: 0; }
+  .mv-hud { grid-template-columns: minmax(max-content, 1fr) minmax(0, 34em) minmax(max-content, 1fr); }
+  .mv-auto { top: calc(env(safe-area-inset-top, 0px) + 6.4em); }
+  .mv-card { grid-template-columns: minmax(0, 15em) minmax(0, 1fr); width: min(58em, 100%); padding: .8em 1.2em; column-gap: 1.4em; }
+  .mv-cruise-heading { font-size: 2em; }
+  /* The 15em column cannot hold a label and a long line side by side: a 9-digit run reached the MUTE box and THIS RUN
+     crossed the card's edge (V1-T08). So each label sits over its line, and a line may still break at its spaces. */
+  .mv-stats { grid-template-columns: minmax(0, 1fr); gap: 0; white-space: normal; }
+  .mv-stats dt, .mv-stats dd { text-align: center; }
+  .mv-stats dd + dt { margin-top: .3em; }
+}
+
+/* A card this close to the panels would sit on top of them, and it carries the run's numbers itself. */
+@media (max-height: 600px) {
+  .mv-ui[data-view~="menu"] > .mv-hud { visibility: hidden; }
+}
+
+/* ---- fatal page: flat gradients and paths only, section 10.1 ---- */
+
+.mv-fatal {
+  position: fixed;
+  inset: 0;
+  z-index: 2147483000;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 1em;
+  overflow: auto;
+  pointer-events: auto;
+  background: linear-gradient(180deg, #0d0221 0%, #3a0f6b 42%, #fd3777 62%, #ffb15c 64%, #0d0221 64.1%, #0d0221 100%);
+}
+.mv-fatal-sun {
+  position: absolute;
+  left: 50%;
+  top: 64%;
+  width: min(62vw, 52vh);
+  aspect-ratio: 1;
+  transform: translate(-50%, -62%);
+  border-radius: 50%;
+  background: linear-gradient(180deg, #ffd319 0%, #ff8c3a 46%, #f6019d 100%);
+  -webkit-mask-image: linear-gradient(180deg, #000 0, #000 38%, transparent 38%, transparent 42%, #000 42%, #000 50%, transparent 50%, transparent 55%, #000 55%, #000 62%, transparent 62%);
+  mask-image: linear-gradient(180deg, #000 0, #000 38%, transparent 38%, transparent 42%, #000 42%, #000 50%, transparent 50%, transparent 55%, #000 55%, #000 62%, transparent 62%);
+}
+.mv-fatal-grid {
+  position: absolute;
+  left: 0;
+  right: 0;
+  top: 64%;
+  bottom: 0;
+  width: 100%;
+  height: 36%;
+}
+.mv-fatal-grid path { fill: none; stroke: #f6019d; stroke-width: 1.5px; }
+
+.mv-fatal-card {
+  position: relative;
+  width: min(38em, 100%);
+  padding: 1.5em 1.8em;
+  text-align: center;
+  background: rgba(10, 3, 30, .97);
+  border: 2px solid #2DE2E6;
+  box-shadow: 0 0 1.4em -.2em #2DE2E6;
+}
+.mv-fatal-heading {
+  margin: 0;
+  font-size: 2.5em;
+  line-height: 1.05;
+  letter-spacing: .06em;
+  color: #fff;
+  text-shadow: -.04em 0 0 #ff003c, .04em 0 0 #00f0ff;
+}
+.mv-fatal-body { margin: .8em 0 1.1em; font-weight: 400; font-size: 1.05em; line-height: 1.35; color: var(--mv-text); }
+.mv-fatal-reload {
+  min-height: max(2.8em, 44px);
+  min-width: 44px;
+  padding: .4em 2em;
+  font-size: 1.2em;
+  letter-spacing: .2em;
+  color: #fff;
+  background: rgba(45, 226, 230, .16);
+  border: 2px solid #2DE2E6;
+}
+.mv-fatal .mv-fatal-reload:hover { background: rgba(45, 226, 230, .32); }

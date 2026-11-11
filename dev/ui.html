@@ -1,0 +1,53 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<title>Midnight Vector UI dev page</title>
+<link rel="icon" href="data:,">
+<style>
+  html, body { margin: 0; height: 100%; overflow: hidden; overscroll-behavior: none; background: #0d0221; }
+  #stage {
+    --top: #0d0221; --mid: #3a0f6b; --hor: #fd3777; --disc-a: #ffd319; --disc-b: #f6019d; --grid: #f6019d;
+    position: fixed; inset: 0; overflow: hidden;
+    background: linear-gradient(180deg, var(--top) 0%, var(--mid) 38%, var(--hor) 61.5%, #000 62%);
+  }
+  #stage[data-palette="1"] { --top: #120458; --mid: #7a04eb; --hor: #ff2a6d; --disc-a: #ffe66d; --disc-b: #ff6c11; --grid: #05d9e8; }
+  #stage[data-palette="2"] { --top: #03001c; --mid: #301e67; --hor: #8a2be2; --disc-a: #e0d4ff; --disc-b: #7b2ff7; --grid: #b026ff; }
+  #stage[data-palette="3"] { --top: #020f0d; --mid: #0b3d2e; --hor: #00ff9f; --disc-a: #d1f7ff; --disc-b: #00b8ff; --grid: #00ff9f; }
+  #stage[data-palette="4"] { --top: #1a0005; --mid: #5c0a2e; --hor: #ff4500; --disc-a: #ffb000; --disc-b: #ff0054; --grid: #ff0054; }
+  #stage[data-palette="5"] { --top: #020b2e; --mid: #0f3c8c; --hor: #7df9ff; --disc-a: #d8f6ff; --disc-b: #4cc9f0; --grid: #4cc9f0; }
+  #stage::before {
+    /* The banded disc: fixed on screen, as section 6.1 keeps it. */
+    content: ""; position: absolute; left: 50%; top: 62%; width: 40vh; height: 40vh; transform: translate(-50%, -78%);
+    border-radius: 50%; background: linear-gradient(180deg, var(--disc-a), var(--disc-b));
+    -webkit-mask-image: repeating-linear-gradient(180deg, #000 0, #000 56%, transparent 56%, transparent 60%, #000 60%, #000 68%, transparent 68%, transparent 73%, #000 73%, #000 80%, transparent 80%, transparent 86%, #000 86%);
+    mask-image: linear-gradient(180deg, #000 0, #000 56%, transparent 56%, transparent 60%, #000 60%, #000 68%, transparent 68%, transparent 73%, #000 73%, #000 80%, transparent 80%, transparent 86%, #000 86%);
+  }
+  #stage::after {
+    /* The grid floor. Dev only: the fatal page and T10's poster must not use a 3D transform (section 10.1). */
+    content: ""; position: absolute; left: -60%; right: -60%; top: 62%; height: 90%;
+    transform-origin: 50% 0; transform: perspective(36vh) rotateX(72deg);
+    background:
+      repeating-linear-gradient(90deg, var(--grid) 0, var(--grid) 2px, transparent 2px, transparent 70px),
+      repeating-linear-gradient(0deg, var(--grid) 0, var(--grid) 2px, transparent 2px, transparent 70px),
+      #08011a;
+  }
+  #stage[data-bg="white"] { background: #fff; }
+  #stage[data-bg="black"] { background: #000; }
+  #stage[data-bg="white"]::before, #stage[data-bg="white"]::after,
+  #stage[data-bg="black"]::before, #stage[data-bg="black"]::after { display: none; }
+</style>
+</head>
+<body>
+<div id="stage"></div>
+<div id="ui"></div>
+<script type="module">
+  import { createUi } from '/src/ui/index.ts';
+  import { createInput } from '/src/input/index.ts';
+  import { scriptedFrame } from '/src/testing/scriptedFrame.ts';
+  import { installDevPage } from '/src/ui/devPage.ts';
+  installDevPage({ createUi, createInput, scriptedFrame });
+</script>
+</body>
+</html>

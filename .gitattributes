@@ -1,0 +1,12 @@
+# Keep LF in the working tree on every checkout. This machine sets core.autocrlf=true
+# globally, which would otherwise rewrite text files to CRLF.
+* text=auto eol=lf
+
+# Binary: never normalise.
+*.png binary
+*.jpg binary
+*.jpeg binary
+*.gif binary
+*.webp binary
+*.wav binary
+*.ico binary

@@ -1,0 +1,4 @@
+{ "extends": "./tsconfig.json",
+  "compilerOptions": { "types": ["vite/client", "node"], "allowImportingTsExtensions": true },
+  "include": ["tests/**/*.ts", "scripts/**/*.ts", "*.config.ts"],
+  "exclude": ["tests/boundaries/fixtures/**"] }

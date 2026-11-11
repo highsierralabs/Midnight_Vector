@@ -1,0 +1,16 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <title>Post stack and speed lines</title>
+  <link rel="icon" href="data:,">
+</head>
+<body>
+<script type="module">
+  import { startDevShell } from '/src/testing/devShell.ts';
+  import { createFxDev } from '/src/render/fx/dev/fxDev.ts';
+  const d = createFxDev(new URLSearchParams(location.search));
+  startDevShell(d.layers, d.post, d.shellOptions);
+</script>
+</body>
+</html>

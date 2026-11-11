@@ -1,0 +1,35 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <title>Sky</title>
+  <link rel="icon" href="data:,">
+</head>
+<body style="margin:0;background:#000">
+<script type="module">
+  // ?iso=all|gradient|stars|nebula|hero|nostars ?naive=1 ?below=legacy ?verbatim=1 ?candidate=1 ?floor=1 ?period=<chunks> ?nan=1 ?tier0=full, plus the shell's own.
+  import { startDevShell } from '/src/testing/devShell.ts';
+  import { createFakeWorld } from '/src/testing/fakeWorld.ts';
+  import { createSkyCore } from '/src/render/sky/skyLayer.ts';
+  import { createDevFloor } from '/src/render/sky/dev/devFloor.ts';
+  import { installSkyDev } from '/src/render/sky/dev/devHarness.ts';
+  const q = new URLSearchParams(location.search);
+  // Variable specifiers: the working copy is deleted at M8, and a literal import of a missing path would 500 the whole page.
+  const heroPath = q.get('verbatim') === '1' ? '/src/render/sky/dev/hero.v0.glsl?raw' : q.get('candidate') === '1' ? '/src/render/sky/dev/hero.candidate.glsl?raw' : null;
+  const heroSource = heroPath ? (await import(/* @vite-ignore */ heroPath)).default : undefined;
+  const o = {};
+  if (q.get('iso')) o.iso = q.get('iso');
+  if (q.get('naive') === '1') o.naiveStars = true;
+  if (q.get('below') === 'legacy') o.legacyBelow = true;
+  if (q.get('nan') === '1') o.nanTest = true;
+  if (q.get('tier0') === 'full') o.fullAtTier0 = true;
+  if (heroSource !== undefined) o.heroSource = heroSource;
+  const core = createSkyCore(o);
+  const layers = [core];
+  if (q.get('floor') === '1') layers.push(createDevFloor(heroSource));
+  const world = createFakeWorld(q.get('period') ? { periodChunks: Number(q.get('period')) } : {});
+  const shell = startDevShell(layers, undefined, { world });
+  installSkyDev(core, shell, heroSource);
+</script>
+</body>
+</html>
