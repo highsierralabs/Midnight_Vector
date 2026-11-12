@@ -6,7 +6,7 @@ owner: T01 executor
 depends_on: [T00]
 owns: [src/world/**, tests/unit/world/**, plans/T01-world.md]
 reads: [architecture.md, Agents.md, src/contracts/**, src/core/**, src/testing/**, plans/T00-foundation.md]
-updated: 2026-11-07T23:35Z
+updated: 2026-11-12T18:04Z
 ---
 
 ## 1. Purpose
@@ -768,7 +768,7 @@ Paste short output into Progress as each passes. All values must come from this 
 - [x] 2026-11-05T15:45Z A15 `npm run check:task -- T01`: `tsc: 33 owned files, 2 configs, 0 problems`, `eslint: 33 owned files, 0 errors, 0 warnings`, `vitest: 13 owned files, exit 0`, `glsl: 33 owned files scanned, 0 hits`, `check:task T01 PASS`, exit 0. `npm run plans:check`: `12 plans, 2648 pattern pairs, 0 problems`, exit 0.
 - [ ] A16 whole-repo `npm run check`: not run by T01. The batch orders it held until all siblings finish. Per DI-64 the T00 owner ran it after batch 1: typecheck and lint clean, 1627 passed, 2 failed (T03 `layer.test.ts:357`, T05 `alloc.test.ts:83`), none in T01's paths. T01 counts as done for T10 only after the post-repair whole-repo run is green, which the T00 owner runs.
 
-**Repair R1, after the V1 verdict (passed, 0 blocking, 5 low defects for T01).** Scratch: `C:/Users/kgran/AppData/Local/Temp/claude/802ff760ce0bdd56/d050f826-f2f3-4f5f-ab68-28447d8d5879/scratchpad/T01/` (`mutate.mjs`, `before-fix.log`, `after-fix.log`, `retuneKAll.log`, `backup0/`). Each mutation is applied, run, restored from the original bytes and its md5 compared to the pre-mutation hash.
+**Repair R1, after the V1 verdict (passed, 0 blocking, 5 low defects for T01).** Scratch: `C:/Users/<user>/AppData/Local/Temp/claude/802ff760ce0bdd56/d050f826-f2f3-4f5f-ab68-28447d8d5879/scratchpad/T01/` (`mutate.mjs`, `before-fix.log`, `after-fix.log`, `retuneKAll.log`, `backup0/`). Each mutation is applied, run, restored from the original bytes and its md5 compared to the pre-mutation hash.
 
 - [x] 2026-11-05T20:03Z Baseline `npm run check:task -- T01`: 129 passed, 2 skipped, `check:task T01 PASS`, exit 0. Owned files copied to `backup0/` with md5s.
 - [x] 2026-11-05T20:05Z Before any fix, the five gaps reproduced against the old tests:
@@ -815,7 +815,7 @@ Paste short output into Progress as each passes. All values must come from this 
 
 Remaining: A16, held by the T00 owner (DI-64). A12 on a quiet machine, as before. Nothing else in T01's paths.
 
-**Repair R2, after the V2 verdict (passed, 0 blocking, 2 low defects for T01).** Scratch: `C:/Users/kgran/AppData/Local/Temp/claude/802ff760ce0bdd56/d050f826-f2f3-4f5f-ab68-28447d8d5879/scratchpad/T01/R2/` (`start.md5`, `backup/`, logs).
+**Repair R2, after the V2 verdict (passed, 0 blocking, 2 low defects for T01).** Scratch: `C:/Users/<user>/AppData/Local/Temp/claude/802ff760ce0bdd56/d050f826-f2f3-4f5f-ab68-28447d8d5879/scratchpad/T01/R2/` (`start.md5`, `backup/`, logs).
 
 - [x] 2026-11-05T21:53Z Start. Status to in-progress. All 33 code and test files md5-equal to V2's `start.md5`; the plan equals V2's post-note md5 `515320c2...`. `noise.ts`, `noise.test.ts` and this plan copied to `backup/`.
 - [x] 2026-11-05T21:53Z Item 1 before the fix, `mutate.mjs` on `noise.ts:148`, `noise.test.ts` only, each restored to md5 `fcb15e1e...`:
@@ -1036,3 +1036,4 @@ Fallback: the section 4 tables.
 - 2026-11-05T21:56Z Repair R2 by the T01 executor, after V2's verdict. Status went to in-progress at 21:53Z and back to done. Test file: `noise.test.ts` only, the row-cache test's neighbour calls and its name. Plan: drill D17 widened to the `zs` and `iz` keys; sections 10, 11 and 13 cite DI-69 for the PYLON scope; section 11 records V2's acceptance of the R1 sub-window change and adds one R2 row; section 13 gains an R2 paragraph; Progress. No threshold or expected value moved.
 - 2026-11-07T21:30Z Reopened by the T00 owner for T11's operator review (DI-118), status `in-progress`: the lane's height, gates at it with radius 6, shards following, the solvable road flown in height, the golden re-recorded, an allocation found and fixed; close to follow.
 - 2026-11-07T23:35Z DI-118 closed, status `done`.
+- 2026-11-12T18:04Z **Identifiers replaced (T12, DI-120), at the operator's choice before the repository is made public.** The operator's Windows user name in session scratch paths now reads `<user>` (2 lines). Nothing else in those lines changed, quoted text included. The commits before this one keep the old text. Status unchanged. Not committed.

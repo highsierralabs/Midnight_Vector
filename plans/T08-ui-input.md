@@ -6,7 +6,7 @@ owner: T08 executor
 depends_on: [T00]
 owns: [src/ui/**, src/input/**, dev/ui.html, tests/unit/input/**, tests/unit/ui/**, tests/visual/ui.spec.ts, plans/T08-ui-input.md]
 reads: [architecture.md, Agents.md, src/contracts/**, src/core/**, src/testing/**, tests/support/**, plans/T00-foundation.md]
-updated: 2026-11-12T03:32Z
+updated: 2026-11-12T18:04Z
 ---
 
 ## 1. Purpose
@@ -470,7 +470,7 @@ Working directory `C:\highsierralabs\terrain`. **The one-liner above is not used
 PowerShell 5.1, for checks, backups and the gates that start no browser:
 
 ```powershell
-$S = 'C:\Users\kgran\AppData\Local\Temp\claude\802ff760ce0bdd56\d050f826-f2f3-4f5f-ab68-28447d8d5879\scratchpad'
+$S = 'C:\Users\<user>\AppData\Local\Temp\claude\802ff760ce0bdd56\d050f826-f2f3-4f5f-ab68-28447d8d5879\scratchpad'
 
 # FH0 and before every run: who listens. Touch none of these.
 Get-NetTCPConnection -State Listen | Where-Object { $_.LocalPort -in 5100,5108,5110,5118,5173 } | ForEach-Object { "$($_.LocalPort) $($_.OwningProcess) $((Get-CimInstance Win32_Process -Filter "ProcessId=$($_.OwningProcess)").CommandLine)" }
@@ -504,7 +504,7 @@ Git Bash, for every Playwright run, one command per call, each through the GPU l
 ```bash
 # Drive-letter form with forward slashes: the lock hands its command string to cmd.exe, and Node there does not read
 # Git Bash's /c/... form, which Git Bash rewrites only when a whole argument starts with it [I].
-S=C:/Users/kgran/AppData/Local/Temp/claude/802ff760ce0bdd56/d050f826-f2f3-4f5f-ab68-28447d8d5879/scratchpad
+S=C:/Users/<user>/AppData/Local/Temp/claude/802ff760ce0bdd56/d050f826-f2f3-4f5f-ab68-28447d8d5879/scratchpad
 cd /c/highsierralabs/terrain
 LOCK="node $S/tools/gpu-lock.mjs T08"
 
@@ -539,13 +539,13 @@ TERRAIN_PORT=5110 $LOCK 'npx playwright test tests/e2e/modes.spec.ts tests/e2e/t
 
 # FH7, A41: a production build into the scratchpad, never dist/. TERRAIN_PORT=5118 keeps vite.config.ts's cacheDir
 # at node_modules/.vite/p5118; with no port it would name p5100 [O: vite.config.ts resolvePort].
-TERRAIN_PORT=5118 node node_modules/vite/bin/vite.js build --outDir C:/Users/kgran/AppData/Local/Temp/claude/802ff760ce0bdd56/d050f826-f2f3-4f5f-ab68-28447d8d5879/scratchpad/T08-fs/dist --emptyOutDir
+TERRAIN_PORT=5118 node node_modules/vite/bin/vite.js build --outDir C:/Users/<user>/AppData/Local/Temp/claude/802ff760ce0bdd56/d050f826-f2f3-4f5f-ab68-28447d8d5879/scratchpad/T08-fs/dist --emptyOutDir
 # The stylesheet is inlined in the bundle's script (?inline), so the new rules are looked for there.
 grep -l 'mv-toggles' $S/T08-fs/dist/assets/*.js; grep -l 'data-hide-hud' $S/T08-fs/dist/assets/*.js
 # FH-R1: printed, not gated (B21 is T09's): the scratch build's JS by gzip level 9, B21's method, for headroom against 260 KB.
 node -e "const fs=require('fs'),z=require('zlib'),d=process.argv[1];let t=0;for(const f of fs.readdirSync(d))if(f.endsWith('.js'))t+=z.gzipSync(fs.readFileSync(d+'/'+f),{level:9}).length;console.log('scratch JS gzip',(t/1024).toFixed(1),'KB, harness chunk included')" $S/T08-fs/dist/assets
 # Run this one in the background; vite.config.ts binds preview to 127.0.0.1.
-node node_modules/vite/bin/vite.js preview --outDir C:/Users/kgran/AppData/Local/Temp/claude/802ff760ce0bdd56/d050f826-f2f3-4f5f-ab68-28447d8d5879/scratchpad/T08-fs/dist --port 5118 --strictPort
+node node_modules/vite/bin/vite.js preview --outDir C:/Users/<user>/AppData/Local/Temp/claude/802ff760ce0bdd56/d050f826-f2f3-4f5f-ab68-28447d8d5879/scratchpad/T08-fs/dist --port 5118 --strictPort
 $LOCK "node $S/T08-fs/smoke/built-smoke.mjs"
 ```
 
@@ -570,7 +570,7 @@ Stopping a server this task started, and nothing else (PowerShell):
 #   }
 # }
 # FH-R2 (4): the same, and never a PID that FH0 recorded. Without FH0's record, nothing is stopped.
-$S = 'C:\Users\kgran\AppData\Local\Temp\claude\802ff760ce0bdd56\d050f826-f2f3-4f5f-ab68-28447d8d5879\scratchpad'
+$S = 'C:\Users\<user>\AppData\Local\Temp\claude\802ff760ce0bdd56\d050f826-f2f3-4f5f-ab68-28447d8d5879\scratchpad'
 $rec = "$S\T08-fs\fh0-listeners.txt"
 if (-not (Test-Path $rec)) { "no FH0 record at $($rec): nothing stopped" } else {
   $fh0 = @(Get-Content $rec | Where-Object { $_ -match '^\d+$' } | ForEach-Object { [int]$_ })
@@ -1029,7 +1029,7 @@ Reopened by the T00 owner for the operator's request (section 14). Planning only
 **FH review round 1 (FH-R1).** The reviewer asked for changes, with eight findings (section 14). Planning only again: no file under `src/`, `tests/` or `dev/` was edited. Probes P5 to P7 ran in the scratchpad `T08-fs/probe` against a Vite dev server of my own on 127.0.0.1:5128, each through the GPU lock. Ports 5100 and 5173 were not touched.
 
 - [x] 2026-11-07T16:16Z Read `Agents.md` in full and this plan's FH text. Rechecked on disk: `tests/support/pw.ts` (the fixture fails on `console.error` and `pageerror`, and `allowConsoleErrors` mutes both), `src/ui/devPage.ts` (`togglePause` flips the dev mode at once, and `step()` runs `ui.frame`), `src/ui/dom.ts` (`checkRow` wraps the box and a `span` in one `label`), `src/ui/ui.css` (`.mv-row` sets `display: flex`; `.mv-radio` has `nowrap`, `.mv-check` does not; checkboxes are `skewX(-12deg)`, radios `transform: none`), and `tests/visual/ui.spec.ts`'s `dumpGeometry`, `geometryProblems` and `storage:` round trip. Playwright's output-folder clearing is in `createRemoveOutputDirsTask`, `node_modules/playwright/lib/runner/index.js`.
-- [x] 2026-11-07T16:16Z Listeners: 5100 PID 35208, `vite.js preview --host 100.102.246.127` (the operator's); 5173 PIDs 22556 and 36252 (another project's dev server); 5108, 5110, 5118 and 5128 free; the GPU lock free. Touched none of them.
+- [x] 2026-11-07T16:16Z Listeners: 5100 PID 35208, `vite.js preview --host <tailnet-ip>` (the operator's); 5173 PIDs 22556 and 36252 (another project's dev server); 5108, 5110, 5118 and 5128 free; the GPU lock free. Touched none of them.
 - [x] 2026-11-07T16:17Z Probe server started: `node node_modules/vite/bin/vite.js --port 5128 --strictPort --host 127.0.0.1`, PID 58936, its command line checked.
 - [x] 2026-11-07T16:17:46Z to 16:17:59Z **P5, fullscreen order, refusal and exit errors** (`probe-fs2.mjs`): exit 0. Findings in section 10.
 - [x] 2026-11-07T16:18:29Z to 16:18:30Z **P6, the label engine and a hidden label** (`probe-label.mjs`): exit 0. Findings in section 10.
@@ -1049,7 +1049,7 @@ Reopened by the T00 owner for the operator's request (section 14). Planning only
 
 **FH execution, after the approval at 17:05Z.** T08 executor. Port 5108 for this task's specs, 5110 for T10's rows; output under `test-results/T08/`. Every Playwright run went through `gpu-lock.mjs T08`, one command per call, and nothing under `src/` or `tests/` was edited while one ran. Scratch files, logs, drafts and backups are in the scratchpad `T08-fs`.
 
-- [x] 2026-11-07T17:08Z **FH0.** Read `Agents.md` in full and this plan in full, then `src/ui/**`, `dev/ui.html`, `tests/support/pw.ts`, `playwright.config.ts` and the parts of `tests/visual/ui.spec.ts` FH extends. Approval note present (section 14, 17:05Z). Listeners: 5100 PID 35208 (`vite.js preview --host 100.102.246.127`, the operator's), 5173 PIDs 22556 and 36252 (another project); 5108, 5110 and 5118 free; the GPU lock free. `T08-fs/fh0-listeners.txt` written once, holding 36252, 22556, 36252, 35208. Backups of the nine files of section 6 in `T08-fs/backup` with `sha256.txt`; the spec's hash begins `3EA878F3C2CE`, the FC repair's last value. `src/ui/fullscreen.ts` and `tests/unit/ui/fullscreen.test.ts` did not exist. `dist/`'s newest file: `2026-11-07T14:56:13.0942558Z dist\assets\testHook-DMG-gi9O.js`.
+- [x] 2026-11-07T17:08Z **FH0.** Read `Agents.md` in full and this plan in full, then `src/ui/**`, `dev/ui.html`, `tests/support/pw.ts`, `playwright.config.ts` and the parts of `tests/visual/ui.spec.ts` FH extends. Approval note present (section 14, 17:05Z). Listeners: 5100 PID 35208 (`vite.js preview --host <tailnet-ip>`, the operator's), 5173 PIDs 22556 and 36252 (another project); 5108, 5110 and 5118 free; the GPU lock free. `T08-fs/fh0-listeners.txt` written once, holding 36252, 22556, 36252, 35208. Backups of the nine files of section 6 in `T08-fs/backup` with `sha256.txt`; the spec's hash begins `3EA878F3C2CE`, the FC repair's last value. `src/ui/fullscreen.ts` and `tests/unit/ui/fullscreen.test.ts` did not exist. `dist/`'s newest file: `2026-11-07T14:56:13.0942558Z dist\assets\testHook-DMG-gi9O.js`.
 - [x] 2026-11-07T17:09Z **FH0 baseline, unchanged source.** Unit: `tests/unit/ui` 8 files, 153 passed; `tests/unit/input` 2 files, 51 passed (204). A40: `check:task T08 PASS`, `tsc: 33 owned files, 2 configs, 0 problems`, `eslint: 33 owned files, 0 errors, 0 warnings`, `vitest: 10 owned files, exit 0`, `glsl: 34 owned files scanned, 0 hits`.
 - [x] 2026-11-07T17:13Z **FH0 baseline, `ui.spec.ts` on `gpu`** (`test-results/T08/fh-base`, log `T08-fs/fh-base.log`), 17:09:58Z to about 17:13Z: exit 0, **`235 passed (2.6m)`**, no `Execution context was destroyed`.
 - [x] 2026-11-07T17:16Z **FH0 baseline, A37** (T10's four files, read-only, port 5110, `test-results/T08/fh-e2e`, log `T08-fs/fh-e2e-before.log`): exit 0, **`17 passed (2.4m)`**. Afterwards 5108 and 5110 free; 5100 still PID 35208.
@@ -1130,7 +1130,7 @@ Reopened by the T00 owner for the operator's request (section 14). Planning only
 
 **FH verifier round 1 repair (FH-V1).** The independent verifier found one minor defect and one nit (section 14). T08 executor. Port 5108 for this task's specs, 5110 for T10's rows; output under `test-results/T08/fv1-*`; logs, images and backups in the scratchpad `T08-fs/fv1` and `T08-fs/backup-V1`. Every Playwright run went through `gpu-lock.mjs T08`, one command per call, and nothing under `src/` or `tests/` was edited while one ran.
 
-- [x] 2026-11-07T18:20Z Read `Agents.md` in full; the defect's sites (`src/ui/index.ts` `frame`, `src/ui/devPage.ts` `togglePause`); T10's `src/app/commands.ts`, `src/app/view.ts` and `src/app/boot.ts` line 48, and `src/sim/sim.ts` and `src/sim/rules.ts` `command()`, all read-only: `FrameView.sim` is `sim.state`, and `sim.command` applies at once, setting mode CRUISE and autopilot true. The verifier's `fh-built-leave.spec.ts`, read as data. Listeners: 5100 PID 35208 (the operator's `vite.js preview --host 100.102.246.127`), 5173 PIDs 22556 and 36252 (another project); 5108, 5110, 5118 and 5128 free; the GPU lock free. Backups of `src/ui/index.ts`, `src/ui/devPage.ts`, `tests/visual/ui.spec.ts` and this plan in `T08-fs/backup-V1` with `sha256.txt`. `index.ts` and `devPage.ts` matched `T08-fs/post-fh-sha256.txt`; the spec did not, and its modification time, 17:48:28Z, is the review-frame fix recorded at 17:47Z, just before the final FH6 pair at 17:48:34Z, so it is the state the verifier reviewed.
+- [x] 2026-11-07T18:20Z Read `Agents.md` in full; the defect's sites (`src/ui/index.ts` `frame`, `src/ui/devPage.ts` `togglePause`); T10's `src/app/commands.ts`, `src/app/view.ts` and `src/app/boot.ts` line 48, and `src/sim/sim.ts` and `src/sim/rules.ts` `command()`, all read-only: `FrameView.sim` is `sim.state`, and `sim.command` applies at once, setting mode CRUISE and autopilot true. The verifier's `fh-built-leave.spec.ts`, read as data. Listeners: 5100 PID 35208 (the operator's `vite.js preview --host <tailnet-ip>`), 5173 PIDs 22556 and 36252 (another project); 5108, 5110, 5118 and 5128 free; the GPU lock free. Backups of `src/ui/index.ts`, `src/ui/devPage.ts`, `tests/visual/ui.spec.ts` and this plan in `T08-fs/backup-V1` with `sha256.txt`. `index.ts` and `devPage.ts` matched `T08-fs/post-fh-sha256.txt`; the spec did not, and its modification time, 17:48:28Z, is the review-frame fix recorded at 17:47Z, just before the final FH6 pair at 17:48:34Z, so it is the state the verifier reviewed.
 - [x] 2026-11-07T18:24Z **Tests first** (FH-37). `devPage.ts`: `togglePause` also writes the current frame's sim at once, as the sim's command does. `ui.spec.ts`: A30 (13) on the dev page, which saves `fh-leave-first-frame-1920x1080.png` before it asserts, and A31's third row, the app with a MutationObserver recorder, both with P in PLAY as a guard. `check:task T08 PASS`, unit 218.
 - [x] 2026-11-07T18:25:01Z to 18:25:11Z **Fail-before, dev page**, `-g "fullscreen: desktop"` on the unfixed `index.ts` (`T08-fs/fv1/fb-dev.log`): exit 1, **1 failed, 10 passed**. (13) at `the first frame after the exit`: received `view "hud auto"`, `mode "play"`, `live "AUTOPILOT - ANY INPUT RETAKES"`, `active "body"`, against `hud menu`, `cruise`, `""`, `resume`. (1) to (9) and (12) pass with the dev-page change alone. Viewed `T08-fs/fv1/fb-fh-leave-first-frame-1920x1080.png`, 1920x1080: the full PLAY HUD (score 01284500, SYNC x8, 12.3 km, S07 MIAMI DUSK, GRAZES 6/10, shields, overdrive, II) with the yellow AUTOPILOT - ANY INPUT RETAKES tag at top centre and no CRUISE card, the picture the verifier described.
 - [x] 2026-11-07T18:25:30Z to 18:25:40Z **Fail-before, app** (`T08-fs/fv1/fb-app.log`): exit 1, failed at `a page-script exit in PLAY: no autopilot view`. The recorder: `[{"b":5,"k":"view","v":"hud auto"},{"b":5,"k":"live","v":"AUTOPILOT - ANY INPUT RETAKES"},{"b":6,"k":"mode","v":"cruise"},{"b":7,"k":"view","v":"hud menu"}]`: the tag view and the announcement in one frame, the mode a frame later, the card two frames later. That is the verifier's (a), (b) and (c).
@@ -1161,7 +1161,7 @@ Reopened by the T00 owner for the operator's request (section 14). Planning only
 
   No defect above a nit. Two nits: `updated` was older than this plan's last change, and A30's fail-before aggregate read 12 where the row has 13.
 - [x] 2026-11-07T19:03Z **Start state.**
-  - 5100 is PID 35208, the operator's `vite.js preview --host 100.102.246.127`. 5173 is PIDs 22556 and 36252, another project. 5108, 5110 and 5118 are free, and the lock is free.
+  - 5100 is PID 35208, the operator's `vite.js preview --host <tailnet-ip>`. 5173 is PIDs 22556 and 36252, another project. 5108, 5110 and 5118 are free, and the lock is free.
   - `index.ts`, `devPage.ts` and `ui.spec.ts` pass `sha256sum -c` against `T08-fs/fv1/final-sha256.txt`, and `ui.css` is `f1615156...`.
   - Only this task's files are newer than 16:00Z. This plan's sha256 is `e2469732...`.
   - Backups: `T08-fs/RECONCILIATION.before.md`, `T08-fs/close/architecture.before.md` and `T08-fs/close/T08-ui-input.before.md`. Hashes of 37 owned files are in `T08-fs/close/start-sha256.txt`.
@@ -1873,3 +1873,4 @@ Lessons:
 - 2026-11-12T03:25Z Amendment WM extended in the same session for the operator's second report: Purpose item 14, rows A51 and A52, HC15 widened, WM-3, Progress, Surprises, Outcomes. Changed, inside `owns`: `src/ui/ui.css`, `tests/visual/ui.spec.ts`, this plan. Status `done`, with HC15 open. Not committed.
 - 2026-11-12T03:25Z HC15 recorded as passed from the operator's phone report, light and dark modes. No other change.
 - 2026-11-12T03:32Z Timestamp correction. Amendment WM's stamps from 02:55Z on were estimated when written, not read from a clock. Three of them (03:35Z, 03:40Z, 03:50Z) fell after commit `0d559b9` at 03:25:28Z, which contains the work they record; they now read 03:25Z, the commit's time, as an upper bound. The other WM stamps are approximate, within 02:52Z (a clock read) and 03:25Z. No other change.
+- 2026-11-12T18:04Z **Identifiers replaced (T12, DI-120), at the operator's choice before the repository is made public.** The operator's Windows user name in session scratch paths now reads `<user>` (5 lines), and the operator's tailnet address reads `<tailnet-ip>` (4 lines). Nothing else in those lines changed, quoted text included. The commits before this one keep the old text. Status unchanged. Not committed.

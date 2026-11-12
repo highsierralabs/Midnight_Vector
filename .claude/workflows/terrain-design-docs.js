@@ -10,7 +10,7 @@ export const meta = {
 }
 
 const ROOT = 'C:/highsierralabs/Midnight_Vector'
-const PROBE = 'C:/Users/kgran/AppData/Local/Temp/claude/802ff760ce0bdd56/d050f826-f2f3-4f5f-ab68-28447d8d5879/scratchpad/probe'
+const PROBE = 'C:/Users/<user>/AppData/Local/Temp/claude/802ff760ce0bdd56/d050f826-f2f3-4f5f-ab68-28447d8d5879/scratchpad/probe'
 
 const BRIEF = `
 THE USER'S REQUEST (verbatim):
