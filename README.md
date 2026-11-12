@@ -4,7 +4,7 @@ An endless 80s synthwave arcade game that runs in your browser. You fly a low ho
 
 **Play it:** https://highsierralabs.github.io/Midnight_Vector/
 
-![The Midnight Vector title screen](docs/screenshots/title.png)
+https://github.com/user-attachments/assets/e20a989e-7f0a-4b51-bb5a-d8ccab93d632
 
 | Crystal Desert | Cyber Canyon | Olympus |
 |---|---|---|

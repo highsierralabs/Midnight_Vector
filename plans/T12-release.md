@@ -6,7 +6,7 @@ owner: T12 executor, for the operator
 depends_on: [T10]
 owns: [README.md, LICENSE, THIRD-PARTY-NOTICES.md, CONTRIBUTING.md, docs/screenshots/**, .github/**, plans/T12-release.md]
 reads: [architecture.md, Agents.md, plans/**, package.json, vite.config.ts, src/ui/copy.ts, src/input/keys.ts, src/sim/rules.ts]
-updated: 2026-11-12T18:42Z
+updated: 2026-11-12T21:13Z
 ---
 
 ## 1. Purpose
@@ -14,7 +14,7 @@ updated: 2026-11-12T18:42Z
 The operator decided on 2026-11-12 to open-source Midnight Vector under the MIT licence and to publish the game on GitHub Pages from this repository. After T12:
 
 1. Anyone can open `https://highsierralabs.github.io/Midnight_Vector/` and play the game, with no server of the operator's running.
-2. `https://github.com/highsierralabs/Midnight_Vector` is public. Its front page shows a README with the play link, four screenshots, how to play, the prompt the build started from, and how to run it locally.
+2. `https://github.com/highsierralabs/Midnight_Vector` is public. Its front page shows a README with the play link, a gameplay video and three screenshots (four screenshots until Amendment V), how to play, the prompt the build started from, and how to run it locally.
 3. The repository states its licence (MIT, copyright 2026 Kris E. Granholm) and carries the licence texts of the two libraries the built game contains.
 4. Every push to `main` rebuilds and redeploys the game. Nothing automated ever commits.
 5. The tracked files no longer contain the operator's Windows user name or tailnet address.
@@ -95,7 +95,7 @@ An endless 80s synthwave arcade game that runs in your browser. You fly a low ho
 
 **Play it:** https://highsierralabs.github.io/Midnight_Vector/
 
-![The Midnight Vector title screen](docs/screenshots/title.png)
+https://github.com/user-attachments/assets/e20a989e-7f0a-4b51-bb5a-d8ccab93d632
 
 | Crystal Desert | Cyber Canyon | Olympus |
 |---|---|---|
@@ -179,6 +179,15 @@ Four PNG files, 1600 x 900, 2.1 to 2.5 MB each: `title.png`, `crystal-desert.png
 - The other three: `/?harness&period=0&tier=4`, launched by a real mouse click on `[data-mv="launch"]`, then `warp` to the first zone of the biome (`findBiomeChunk`), then real frames through `stepFrames` with the mouse moved between batches. Each was in PLAY mode with the HUD on when taken. The quality is HIGH (tier 4), forced.
 
 The capture script was a scratch file and is not part of the repository.
+
+**Since Amendment V (2026-11-12):** `title.png` is removed, and the README shows a video in its place. The video is not a file in this repository. It is a GitHub attachment, `https://github.com/user-attachments/assets/e20a989e-7f0a-4b51-bb5a-d8ccab93d632`, which GitHub's renderer turns into a player.
+
+- The file: `readme-540p60.mp4`, 9,043,666 bytes, H.264, 960 x 540, 60 frames a second, 34.0 s (2040 frames), no sound track.
+- What it shows: 5 s of the title screen in DEMO mode, a real mouse click on `[data-mv="launch"]`, 10 s of the run from the start, 10 s in Olympus and 10 s in Crystal Desert. Title into launch is one take. The two biome cuts are half-second crossfades.
+- How it was captured: `/?harness&period=0&tier=4` on the operator's local preview server, whose entry bundle has the same name as the deployed one (`index-DWbLPmpn.js`) [O]; the cached headless Chromium with the `gpu` project's flags at 1920 x 1080. Each video frame is one `stepFrames(1, 1/60)` and one screenshot, so the capture is slower than real time and the video is not. CSS animations were paused and moved by the video's clock for the same reason.
+- Who flies: a scripted pilot, not a person. The game's own planner (`src/sim/autopilot.ts`, with `collision.ts` and `tuning.ts`) was bundled into a scratch script outside the game. Each frame it reads the sim state and the world's item rows and picks a target, and a real mouse move steers there. The sim reported `autopilot: false` throughout, so the run is graded as a player's. It took 0 hits and ended at 165,850 points, SYNC 15, three shields.
+- The biomes are the same run, moved ahead by `warp` to chunk `findBiomeChunk + 12`, with two seconds flown unrecorded before each recording starts.
+- Encoded with ffmpeg (`libx264`, two passes at 2150 kb/s) from a 1920 x 1080 master. The scripts and the master are scratch files and are not part of the repository.
 
 ### 4.3 `LICENSE`
 
@@ -365,7 +374,7 @@ Branch protection is verified by reading it back only. The direct test would be 
 
 - **HC1.** On the operator's phone, at the Pages URL: the game starts, the sound plays after LAUNCH, touch steers, and FULLSCREEN works.
 - **HC2.** On a desktop browser, at the Pages URL: the same, with keyboard and mouse.
-- **HC3.** The repository's front page on github.com: the README reads correctly and the four screenshots show.
+- **HC3.** The repository's front page on github.com: the README reads correctly, the video plays and the three screenshots show (four screenshots until Amendment V).
 
 ## 8. Idempotence and recovery
 
@@ -406,6 +415,16 @@ Branch protection is verified by reading it back only. The direct test would be 
 - [x] 2026-11-12T18:42Z For HC3, what an agent can check: GitHub's rendered README has the four image sources and every link of section 4.1, and `title.png` is served from the repository (200, 2,146,452 bytes). How it looks is the operator's check.
 - [x] 2026-11-12T18:42Z M7 Close. Outcomes written, status `done` with HC1 to HC3 open. This plan's edits since `086c514` are not committed; the closing commit waits for the operator's word, and pushing it redeploys the same game.
 
+**Amendment V: a gameplay video in place of the title screenshot.**
+
+- [x] 2026-11-12T21:13Z The operator asked for it in session, verbatim: "Add the short crossfades and let's use the video in place of the title screenshot we used in the readme." The steps were put to the operator (upload, README line, removal of `title.png`, this record, commit and push, a check of the rendered README) and released, verbatim: "You can do the upload of the 540p version. I'm running this session remotely. And proceed with steps 2-5."
+- [x] 2026-11-12T21:13Z The upload. The executor could not do it: no browser was connected to the session and `gh` 2.96.0 has no attach option. The operator uploaded the file to a comment box on the repository and gave the address in session, without posting the comment.
+- [x] 2026-11-12T21:13Z The address, checked before any file changed. With the operator's token it redirects and returns 200, `video/mp4`, 9,043,666 bytes, the size of the local file. Without a token the address itself returns 404. GitHub's Markdown API, called without a token with this repository as context, renders the address as a `<video>` player with a signed source, and that source returns 200, `video/mp4`, 9,043,666 bytes without a token. So an anonymous visitor gets the video through the rendered page, not through the bare address.
+- [x] 2026-11-12T21:13Z `README.md` line 7 and the same line of section 4.1: the image is replaced by the address on a line of its own. `docs/screenshots/title.png` removed with `git rm`; nothing else referenced it (`git grep`). Sections 1, 4.2 and 7 (HC3) say what changed.
+- [x] 2026-11-12T21:13Z Checks before the commit: `npm run plans:check`, `npm run check` and the identifier scan of A6. Their results are in the revision note of this amendment (section 14).
+- The earlier entries that say this plan's edits are not committed were true when written. Those edits were committed as `83f5d11` before this amendment, at the operator's word.
+- After the push: the Pages run for the pushed commit and GitHub's rendered README (a `<video>` element, three image sources, read with and without a token) are checked and reported to the operator in session. This is the first deploy triggered by a push to the public repository. Nothing more is written here unless one of them fails.
+
 ## 10. Surprises and discoveries
 
 - **The plan is written before its §12 row exists.** Until M0, `npm run plans:check` reports one problem, `T12: no row in architecture.md section 12`. The row is a change to `architecture.md`, so it waits for this plan's approval with everything else.
@@ -414,6 +433,9 @@ Branch protection is verified by reading it back only. The direct test would be 
 - **`<user>` is not always inside code.** Of the 16 replaced lines, 13 are in a code span or a fenced block, one is a JavaScript string, one (`plans/T11-art-pass.md`, the reviewer's JSON) is indented as code, and one (`plans/T11-art-pass.md`, the DI-113 reviewer's `overall`) is plain prose. There GitHub's renderer will drop the unknown tag and show `C:/Users//AppData/...`; the file itself is correct [I: from GitHub's HTML sanitising, not viewed].
 - **A5 as written would have rebuilt `dist/`,** which the operator's logon server serves on port 5173. The build went to a scratch folder instead (R-13).
 - **The built bundle has no licence banners** for three.js or postprocessing [O: no `@license` or `Copyright` string in `dist/assets/*.js`], which is why the workflow copies the notices into `dist/`.
+- **A README video cannot come from the repository (Amendment V).** GitHub plays a video in a README only when the file was uploaded through github.com as an attachment, 10 MB at most on a free plan [O: GitHub's documentation, and two public test repositories whose rendered READMEs carry a `<video>` for such an address]. A `<video>` tag pointing at a file in the repository was not found working anywhere, and was not tested here.
+- **The attachment's bare address answers 404 without a token (Amendment V),** while the rendered player's signed source answers 200. A link to the bare address from outside GitHub would therefore not work for a visitor who is signed out. Whether this changes once the address appears in a published README was not tested.
+- **An upload needs a signed-in browser (Amendment V).** No API or `gh` command attaches a file. An agent without the operator's browser cannot do this step.
 
 ## 11. Decision log
 
@@ -432,6 +454,10 @@ Branch protection is verified by reading it back only. The direct test would be 
 | **R-11: actions pinned by commit, not by tag** | A tag can be moved to different code; a commit cannot | 2026-11-12 | T12 executor |
 | **R-12: `"private": true` stays in `package.json`** | It concerns the npm registry, not the repository's visibility | 2026-11-12 | T12 executor |
 | **R-13: A5's build writes to a scratch folder, not `dist/`** | `dist/` is what the operator's own server serves. `vite build --outDir` proves the same thing, that the build still works after the `package.json` change and alters no tracked file, without replacing those files under a running server | 2026-11-12 | T12 executor |
+| **R-14: a gameplay video replaces the title screenshot in the README** | The operator's choice, in session. R-5's "four screenshots" becomes a video and three screenshots | 2026-11-12 | Operator |
+| **R-15: the video is a GitHub attachment, not a file in the repository** | It is the only form GitHub plays in a README. The cost: the file is outside the repository and its history, GitHub offers no simple way to delete it, and the README depends on GitHub keeping it. The operator was told this before uploading | 2026-11-12 | T12 executor; released by the operator |
+| **R-16: `docs/screenshots/title.png` is removed** | Nothing references it once the README shows the video. It stays in history from `cae2f58`. The operator saw this step and released it | 2026-11-12 | T12 executor; released by the operator |
+| **R-17: 960 x 540 at 60 frames a second for the README copy** | It had to fit 10 MB. GitHub shows a README video about that wide, and the game is fast, so smooth motion was preferred to a 1280 x 720 copy at 30 frames a second of the same size. The operator chose "the 540p version" | 2026-11-12 | T12 executor; chosen by the operator |
 
 ## 12. Contract change requests
 
@@ -462,8 +488,12 @@ None. T12 touches nothing under `src/contracts/**`.
 - Commits `e732a82` to `6afd289` keep the user name, the tailnet address, the device names and the quoted comments, and anyone can read them once the repository is public.
 - The current files keep the device and hardware names, the quoted comments and the original prompt.
 
+**Amendment V (2026-11-12):** the README now opens with a 34 s gameplay video in place of the title screenshot. The video is flown by a scripted pilot and has no sound. HC3 now includes that the video plays.
+
 **Not verified by this plan:**
 
+- The video in motion. The executor viewed still frames of it (title, after launch, each biome, the middle of each crossfade), not the video playing, and no browser other than GitHub's own renderer was asked to play it.
+- That the attachment stays available. It was uploaded to a comment that was never posted.
 - Whether another game or a trademark uses the name "Midnight Vector". Nobody searched.
 - The game on a phone, a tablet, Safari or Firefox at the Pages address, and its sound anywhere: A11 is one headless desktop Chromium on the operator's GPU and cannot hear.
 - The unit tests on Linux. Only the build ran there (R-7).
@@ -479,3 +509,4 @@ None. T12 touches nothing under `src/contracts/**`.
 - 2026-11-12T18:20Z Scope widened by four lines, with the operator's agreement ("Proceed with the fix for the 4 lines."): `tests/boundaries/gates.test.ts` now pins 13 tasks, through T00's PR-3. Section 3's table and non-goal say so, and section 6 puts that file in the first commit, with the §12 row it counts. A2 passes. Status `in-progress`, stopped at Gate 1. Nothing is committed.
 - 2026-11-12T18:35Z Gate 1 passed: three commits pushed, A7 and A8 pass. Section 9 updated. Stopped at Gate 2. This note and the Progress entries after `086c514` are not committed.
 - 2026-11-12T18:42Z Gate 2 passed and the plan closed: the repository is public, Pages serves the game, the settings are applied and read back, A9 to A12 pass. Sections 9 and 13 written. Status `done`, with HC1 to HC3 open. The edits to this plan since `086c514` are not committed.
+- 2026-11-12T21:13Z **Amendment V:** the README shows a gameplay video, a GitHub attachment, in place of `docs/screenshots/title.png`, which is removed (R-14 to R-17), at the operator's word. Sections 1, 4.1, 4.2, 7, 9, 10, 11 and 13 updated. `npm run plans:check`: `13 plans, 3187 pattern pairs, 0 problems`. `npm run check` exit 0: `119 passed (119)`, `1990 passed | 2 skipped (1992)`, `glsl:check: 189 files scanned, 0 hits`. The identifier scan: 0 lines. Status stays `done`, with HC1 to HC3 open.
