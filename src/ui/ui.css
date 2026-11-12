@@ -1,6 +1,8 @@
 /* Midnight Vector UI. Every size is an em of --mv-u. Loaded as ?inline, in one <style>, so it needs no request. */
 
 .mv-ui, .mv-fatal {
+  /* Amendment WM: the UI is dark by design, so a browser that darkens light pages (Chrome's dark theme for sites) leaves it alone. */
+  color-scheme: dark;
   --mv-u: clamp(11px, calc(.5vw + .75vh), 20px);
   --mv-mono: "Courier New", ui-monospace, monospace;
   --mv-display: "Arial Black", "Segoe UI Black", Impact, Roboto, "Helvetica Neue", system-ui, sans-serif;
@@ -151,7 +153,13 @@ html[data-mv-boot]:not([data-mv-boot="running"]) .mv-ui .mv-launch {
   -webkit-background-clip: text;
   background-clip: text;
   color: transparent;
-  -webkit-text-stroke: .012em rgba(255, 255, 255, .75);
+  /* Amendment WM: the white rim, traced from the glyph's silhouette. A text stroke outlined every contour,
+     so fonts that build a letter from overlapping contours (Roboto on Android, any variable font) showed lines inside it. */
+  filter:
+    drop-shadow(.006em 0 0 rgba(255, 255, 255, .75))
+    drop-shadow(-.006em 0 0 rgba(255, 255, 255, .75))
+    drop-shadow(0 .006em 0 rgba(255, 255, 255, .75))
+    drop-shadow(0 -.006em 0 rgba(255, 255, 255, .75));
 }
 .mv-wm-top { font-size: min(14vw, 17vh); letter-spacing: .015em; }
 .mv-wm-bottom { font-size: min(10.5vw, 13vh); letter-spacing: .2em; margin-right: -.2em; margin-top: -.04em; }
@@ -163,7 +171,7 @@ html[data-mv-boot]:not([data-mv-boot="running"]) .mv-ui .mv-launch {
     forced-color-adjust: none;
     background: none;
     color: CanvasText;
-    -webkit-text-stroke: 0;
+    filter: none;
   }
 }
 

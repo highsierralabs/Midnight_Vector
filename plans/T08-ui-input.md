@@ -6,7 +6,7 @@ owner: T08 executor
 depends_on: [T00]
 owns: [src/ui/**, src/input/**, dev/ui.html, tests/unit/input/**, tests/unit/ui/**, tests/visual/ui.spec.ts, plans/T08-ui-input.md]
 reads: [architecture.md, Agents.md, src/contracts/**, src/core/**, src/testing/**, tests/support/**, plans/T00-foundation.md]
-updated: 2026-11-11T18:20Z
+updated: 2026-11-12T03:50Z
 ---
 
 ## 1. Purpose
@@ -39,6 +39,13 @@ The operator asked: "I want to let the user to start the game with or without th
 
 11. **Two start buttons on the title**, **LAUNCH** and **LAUNCH - NO HUD**, in place of the one PRESS ANY KEY / TAP TO LAUNCH button. LAUNCH starts a run with the HUD shown; LAUNCH - NO HUD starts it with the HUD hidden exactly as FH's HIDE HUD hides it. The choice is the same remembered setting as the CRUISE card's HIDE HUD box, which stays and still switches it during a run.
 12. **Any key, or a tap or click on the title away from the buttons, still launches**, with the remembered choice. At load the focus sits on the button that matches it, so a key press launches "the focused button", and Tab reaches the other.
+
+### Amendment WM, 2026-11-12: wordmark rim without inner lines (operator request, approved in session)
+
+The operator sent a phone screenshot of the title: "The letters appear to be formed from overlapping rectangles. You can see the outlines inside the letters. The M D H T V E T R each show the issue." What a player sees after WM:
+
+13. **The MIDNIGHT VECTOR wordmark shows no lines inside its letters** in any font the stack falls back to, while keeping the thin white rim, the chrome gradient and the glow.
+14. **The wordmark keeps its chrome under a browser's dark theme for sites.** A second operator report, with a phone screenshot beside an agent's: "on your screenshot the title has a chrome look to it. On my phone it is black instead of the chrome look."
 
 ## 2. Context and orientation
 
@@ -297,7 +304,7 @@ Query parameters: `?state=<name>`, `?bg=scene|white|black`, `?palette=0..5`, `?m
 | `--mv-sun`, `--mv-text` | `#FFD319`, `#EAF6FF` | [A] |
 | `--mv-panel` | `rgba(10, 3, 30, .8)` | Contrast held at a flat .8 and failed with a .62 to .42 gradient [O] |
 
-**Wordmark:** two lines, MIDNIGHT then VECTOR, `h1` with accessible name "Midnight Vector". Upright glyphs with `transform: skewX(-11deg)` on the `h1`, never `font-style: italic` (section 10). `background: linear-gradient(180deg, #e8fbff 0%, #9fe3ff 22%, #fff 44%, #1b1140 49%, #2a1a66 51%, #ff4fb0 58%, #ffd3ef 78%, #fff 100%)`, `-webkit-background-clip: text`, `background-clip: text`, `color: transparent`, `-webkit-text-stroke: .012em rgba(255,255,255,.75)`, `filter: drop-shadow(0 .02em 0 #1b1140) drop-shadow(0 0 .12em rgba(45,226,230,.75)) drop-shadow(0 0 .3em rgba(246,1,157,.55))`. Sizes `min(14vw, 17vh)` and `min(10.5vw, 13vh)`, letter-spacing `.015em` and `.2em` [O: viewed]. At `max-height: 480px`, one line at `min(7.1vw, 17vh)`. Under `forced-colors` the gradient and transparency are dropped.
+**Wordmark:** two lines, MIDNIGHT then VECTOR, `h1` with accessible name "Midnight Vector". Upright glyphs with `transform: skewX(-11deg)` on the `h1`, never `font-style: italic` (section 10). `background: linear-gradient(180deg, #e8fbff 0%, #9fe3ff 22%, #fff 44%, #1b1140 49%, #2a1a66 51%, #ff4fb0 58%, #ffd3ef 78%, #fff 100%)`, `-webkit-background-clip: text`, `background-clip: text`, `color: transparent`, a white rim from four `drop-shadow(±.006em 0 0 rgba(255,255,255,.75))` filters on each line (amendment WM; was `-webkit-text-stroke: .012em`, which outlined overlapping contours), and on the `h1` `filter: drop-shadow(0 .02em 0 #1b1140) drop-shadow(0 0 .12em rgba(45,226,230,.75)) drop-shadow(0 0 .3em rgba(246,1,157,.55))`. Sizes `min(14vw, 17vh)` and `min(10.5vw, 13vh)`, letter-spacing `.015em` and `.2em` [O: viewed]. At `max-height: 480px`, one line at `min(7.1vw, 17vh)`. Under `forced-colors` the gradient and transparency are dropped.
 
 **Title layout:** a flex column filling the viewport, with light top and bottom scrims only, so the world stays visible. Top block: wordmark, overlapping the top of the disc, which §6.1 keeps at a fixed place, so this composition holds. Bottom block, in order: `THE ROAD NEVER STOPS`, bests, launch button, controls legend. The tagline moved here because over the disc it was hard to read [O: viewed]. The moved position has not been shot. `@media (pointer: coarse)` swaps `PRESS ANY KEY` for `TAP TO LAUNCH`, and the keyboard legend for the touch legend. Until `html[data-mv-boot]` reads `running`, a third span, `LOADING`, replaces either prompt in a dimmed button with no glow (DI-95, VI repair). After 3600 ticks with no pointer or key activity, `data-attract` fades the bottom block except the prompt, so the page serves as a screensaver. Any activity restores it.
 
@@ -674,6 +681,20 @@ All browser rows in `tests/visual/ui.spec.ts` on `gpu`, port 5108. Fail-before i
 | A47 | `check:task -- T08`, then the whole `ui.spec.ts` on `gpu` | Exit 0; every existing row passes, with only the E5 edits |
 
 **Human check HC14.** On a phone and a desktop: the two buttons read as a primary and a secondary choice, both are easy to hit, and starting without the HUD then unticking HIDE HUD in CRUISE brings the HUD back. Not verified by an agent.
+
+### Amendment WM, validation and acceptance
+
+Browser rows in `tests/visual/ui.spec.ts` on `gpu`, port 5108. Fail-before is the new rows run against `HEAD`'s `src/ui/ui.css` (`git stash push -- src/ui/ui.css`).
+
+| # | Command or action | Expected |
+|---|---|---|
+| A48 | Title at defaults; then the wordmark font forced to Bahnschrift, a variable font with overlapping contours, and the screenshot viewed | Each `.mv-wm` has a computed `-webkit-text-stroke-width` of `0px` and a `filter` with four `drop-shadow`s. The screenshot shows no line inside any letter. Fail-before: stroke `2.2032px` |
+| A49 | Title under `forced-colors: active` | Each `.mv-wm` has stroke `0px` and `filter: none`. A guard: passes before and after |
+| A51 | Title at defaults | `.mv-ui` computed `color-scheme` is `dark`. Fail-before: `normal` |
+| A52 | A fresh `gpu` browser with `--enable-features=WebContentsForceDark`, context `colorScheme: 'dark'`, 412x915; share of pixels lighter than luminance 0.5 in a 4 px strip at a fifth of MIDNIGHT's height. Control: the same with `.mv-ui { color-scheme: normal !important }` adopted | Share above 0.2; control below 0.1, so forced dark is shown to be engaged. Fail-before: share 0 |
+| A50 | `check:task -- T08`, then the whole `ui.spec.ts` on `gpu` | Exit 0; every existing row passes unchanged |
+
+**Human check HC15.** On the operator's phone (Android, Roboto): the wordmark shows no lines inside M, D, H, T, V, E, R, and its rim still reads as a crisp white edge, and with Chrome's dark theme for sites on, the letters show the light chrome, not black. Not verified by an agent.
 
 ## 8. Idempotence and recovery
 
@@ -1176,6 +1197,20 @@ Reopened by the T00 owner for the operator's request (section 14). Planning only
 - [x] 2026-11-11T18:07Z `npm run check`, whole repo: **exit 0**; vitest 119 files, 1990 passed, 2 skipped; glsl 189 files, 0 hits.
 - [x] 2026-11-11T18:08Z T10's `tests/e2e/modes.spec.ts` on `gpu`, port 5110 (launch by click and by key on the real app): **6 passed.** Read-only for T08: run, not edited.
 
+### Amendment WM, wordmark rim without inner lines (operator request)
+
+- [x] 2026-11-12T02:50Z Cause found and approved: on Android the display stack falls to Roboto, whose heavy glyphs are built from overlapping contours, and `-webkit-text-stroke` strokes every contour, so the overlaps draw inside the letters. Reproduced on this machine with Bahnschrift in Chromium 1234 (stray lines in M, D, H, T with the stroke, none with the silhouette rim; scratchpad `WM/wm.png`). The operator chose "Build it, then deploy". Plan backup: session scratchpad `WM/T08-ui-input.before-WM.md`.
+- [x] 2026-11-12T02:55Z WM code, `src/ui/ui.css` only: `.mv-wm` drops `-webkit-text-stroke` for four `drop-shadow(±.006em ...)` filters at the same colour; the `forced-colors` block sets `.mv-wm { filter: none; }` in place of `-webkit-text-stroke: 0`. `npm run check:task -- T08`: tsc 0 problems, eslint 0 errors 0 warnings, vitest exit 0, glsl 0 hits, PASS.
+- [x] 2026-11-12T02:58Z WM tests, new describe `wordmark: rim` (A48, A49). Run with the LH and contrast rows, `-g "wordmark: rim|forced colors|contrast: title|launch: hud choice"`: **13 passed.** Title contrast unchanged (LAUNCH 18.27, NO HUD 18.36).
+- [x] 2026-11-12T03:00Z **Fail-before** against `HEAD`'s `ui.css`: A48 **failed** (`Expected: "0px"`, `Received: "2.2032px"`); A49 passed, as a guard.
+- [x] 2026-11-12T03:00Z **Viewed** `wm-title-overlap-font.png` (Bahnschrift, 1920x1080) and `lh-title.png` (Arial Black): no line inside any letter, the white rim, gradient and glow intact, buttons unchanged.
+- [x] 2026-11-12T03:05Z A50, whole `ui.spec.ts` on `gpu`, port 5108: **301 passed (3.2 m)**, exit 0. No existing row edited.
+- [x] 2026-11-12T03:15Z Second report (Purpose item 14): the operator's phone draws the chrome near black. Reproduced in Chromium 1234 with `--enable-features=WebContentsForceDark` at 412x915: dark teal and black letters as on the phone (scratchpad `WM/dark-now.png`). Variants under forced dark (`WM/a-` to `g-*.png`): only a dark `color-scheme` together with a dark preference keeps the chrome, whether on `:root` or on `.mv-ui`, at parse time or added after load; `only light` on the root, the UI or the wordmark, with a light preference, did not.
+- [x] 2026-11-12T03:20Z WM code, `src/ui/ui.css`: `color-scheme: dark` on `.mv-ui, .mv-fatal`. Tests A51, A52 (new describe `wordmark: forced dark`). `check:task -- T08`: one tsc problem on the first try (`baseURL` under `exactOptionalPropertyTypes`), fixed with `baseURL!`, then PASS. Rows `-g "wordmark: "`: **4 passed**; A52 logged light share 0.669, control 0.021.
+- [x] 2026-11-12T03:22Z **Fail-before** against `HEAD`'s `ui.css`: A51 **failed** (`Received: "normal"`), A52 **failed** (share 0.000, control 0.000).
+- [x] 2026-11-12T03:25Z **Viewed** forced dark with a dark preference on the rebuilt production bundle at 412x915: title (chrome light, buttons and legend as designed), PLAY HUD and the CRUISE card (panels, sliders, radios, boxes as designed).
+- [x] 2026-11-12T03:35Z A50 again, whole `ui.spec.ts` on `gpu`, port 5108, with A51 and A52: **303 passed (3.4 m)**, exit 0. The rebuilt bundle is served on 5173 for HC15.
+- [x] 2026-11-12T03:50Z **HC15 passed** on the operator's phone, reported with a screenshot: "The chrome lettering is back and working on both light and dark modes on my phone." The screenshot shows the light chrome and no lines inside the letters.
 ## 10. Surprises and discoveries
 
 All from 2026-11-05 scratchpad rehearsals on Chromium 1234. None has run against project code.
@@ -1329,6 +1364,11 @@ That rehearsal page had `touch-action: none` on `body`, so the drag rows hold on
 ### Amendment LH
 
 - Two existing rows depended on the title having exactly one focusable control and one prompt span, which LH removes: the `firstshow: panels` Tab check (`warmProblems` pressed Tab once from the focused launch button) and the title contrast row (`.mv-launch > .mv-if-fine`). The full run caught both: `Expected: true, Received: false` at the control's `Tab reaches the hidden` line, and `getComputedStyle ... parameter 1 is not of type 'Element'` at the contrast row. The guarded firstshow row itself kept passing, but its Tab check had become one that could not fail.
+
+### Amendment WM
+
+- `-webkit-text-stroke` is drawn along each contour of a glyph, not its filled outline, so a font that overlaps contours shows the joins. Arial Black, on the Windows machine where every earlier screenshot was taken, has none, which is why no viewed screenshot showed it. Bahnschrift, a variable font, reproduces it on Windows.
+- Chrome's dark theme for sites darkens a page's light colours unless the page declares a dark `color-scheme` and the user prefers dark. The UI declared none, so the wordmark's light gradient stops were darkened to teal and black. The first phone screenshot already showed it, before WM's rim change. Headless test browsers never enable it, so no row could see it.
 
 ## 11. Decision log
 
@@ -1521,6 +1561,9 @@ That rehearsal page had `touch-action: none` on `body`, so the drag rows hold on
 - **LH-7.** The pair sits in one `.mv-launches` row that wraps on a narrow screen; LAUNCH - NO HUD is drawn smaller, as the secondary choice. The attract fade keeps the row (selector `:not(.mv-launches)`).
 - **E5.** Expected-output edits, no threshold moved: rows that found the button by the name PRESS ANY KEY or TAP TO LAUNCH now find LAUNCH with an exact name match; the cold-load row expects the prompt LAUNCH.
 - **E6.** Two fixture edits found by A47, no threshold moved. `warmProblems` focuses `[data-mv="launch-nohud"]`, the title's last focusable control, before its Tab, as it once tabbed from the only one; the control shows the check fails when the panels are exposed. The title contrast row measures both buttons' labels in place of the removed prompt span, so it now covers two elements where it covered one.
+- **WM-1.** The wordmark's white rim is four `drop-shadow`s offset `.006em` left, right, up and down, at the stroke's colour `rgba(255,255,255,.75)`, on each `.mv-wm`. A drop-shadow follows the rendered alpha, so it traces only the letter's silhouette. `.006em` is the outer half of the old `.012em` centred stroke. Rejected: `paint-order` (the fill is transparent, so the stroke still shows); `text-shadow` (painted over a `background-clip: text` fill); dropping the rim (the operator chose to keep it).
+- **WM-2.** Under `forced-colors` the rim filter is off, as the stroke was, so the wordmark is plain `CanvasText`.
+- **WM-3.** `color-scheme: dark` on `.mv-ui, .mv-fatal`, the UI's own scope, says the UI is dark by design, so Chrome's dark theme for sites leaves its colours alone. On `.mv-ui` it is enough (`WM/g-runtime-ui.png`), so no rule on `html` and no edit to T10's `index.html`. Its other effect is dark native scrollbars; every control already has `appearance: none` outside `forced-colors`. Rejected: `color-scheme: only light` (did not stop forced dark in this browser, and would declare a light page).
 
 ## 12. Contract change requests
 
@@ -1774,6 +1817,18 @@ Lessons:
 
 **Lessons.** A check that walks the focus order should start from a named element. "Tab once from the focused element" quietly depended on how many controls the title had.
 
+### Amendment WM
+
+**Result against Purpose item 13: met on the evidence available.** The wordmark no longer uses a text stroke, and its rim follows the letter silhouette. A48 fails on the old CSS and passes on the new. Screenshots in Bahnschrift, which reproduces the overlap lines, and in Arial Black show no inner lines and an unchanged look otherwise.
+
+**Purpose item 14: met on the evidence available.** Under Chrome's forced dark with a dark preference, the wordmark keeps its light chrome (A52 share 0.669; control 0.021; old CSS 0.000).
+
+**HC15 passed** on the operator's Android phone in light and dark modes (section 9), which covers Roboto and the phone's own dark-theme setting, neither of which was reproducible here.
+
+**Not verified:** iOS Safari was not tested. Whole-repo `npm run check` was not rerun, as the change is one CSS file and one spec file, both covered by `check:task -- T08`.
+
+**Lessons.** Visual checks on one machine see one font. A style that depends on glyph construction needs a check in a fallback font as well.
+
 ## 14. Revision notes
 
 - 2026-11-05T06:22Z Initial draft. No approved revisions.
@@ -1814,3 +1869,6 @@ Lessons:
 - 2026-11-11T18:00Z Reopened in an operator session for amendment LH, LAUNCH with or without the HUD: Purpose items 11 and 12, scope, rows A42 to A47 and HC14, decisions LH-1 to LH-7 and E5, Progress. Approved by the operator in session. Status `in-progress`. `owns` and `reads` unchanged.
 - 2026-11-11T18:20Z **Amendment LH executed and closed** in the same operator session. Changed, all inside `owns`: `src/ui/copy.ts`, `dom.ts`, `title.ts`, `menu.ts`, `index.ts`, `ui.css`, `tests/visual/ui.spec.ts`, this plan. E6 added (two fixture edits found by A47). Status `done`, with HC14 open. `owns` and `reads` unchanged. Not committed.
 - 2026-11-11T18:40Z HC14 recorded from the operator's phone report. No other change.
+- 2026-11-12T03:10Z **Amendment WM** opened, approved, executed and closed in one operator session: Purpose item 13, the section 5 wordmark spec, rows A48 to A50 and HC15, decisions WM-1 and WM-2, Progress, Surprises, Outcomes. Changed, inside `owns`: `src/ui/ui.css`, `tests/visual/ui.spec.ts`, this plan. Status `done`, with HC15 open. `owns` and `reads` unchanged. Not committed.
+- 2026-11-12T03:40Z Amendment WM extended in the same session for the operator's second report: Purpose item 14, rows A51 and A52, HC15 widened, WM-3, Progress, Surprises, Outcomes. Changed, inside `owns`: `src/ui/ui.css`, `tests/visual/ui.spec.ts`, this plan. Status `done`, with HC15 open. Not committed.
+- 2026-11-12T03:50Z HC15 recorded as passed from the operator's phone report, light and dark modes. No other change.

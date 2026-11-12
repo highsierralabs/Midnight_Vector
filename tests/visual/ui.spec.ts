@@ -4298,3 +4298,86 @@ test.describe('launch: hud choice, touch', () => {
     await expect(page.locator('.mv-ui')).toHaveAttribute('data-hide-hud', '1');
   });
 });
+
+// ---- Amendment WM: the wordmark rim follows the glyph silhouette (plan section 7, A48 and A49) ----
+
+interface RimStyle { stroke: string; filter: string }
+
+const rimStyles = (page: Page): Promise<RimStyle[]> =>
+  page.evaluate(() => Array.from(document.querySelectorAll('.mv-wm'), (el) => {
+    const cs = getComputedStyle(el);
+    return { stroke: cs.getPropertyValue('-webkit-text-stroke-width'), filter: cs.filter };
+  }));
+
+test.describe('wordmark: rim', () => {
+  test('A48: no text stroke on either line, and the white rim is four silhouette drop-shadows', async ({ page }, info) => {
+    await page.goto(url());
+    const rows = await rimStyles(page);
+    expect(rows).toHaveLength(2);
+    for (const r of rows) {
+      expect(r.stroke, 'a stroke outlines every contour, overlaps included').toBe('0px');
+      expect(r.filter.match(/drop-shadow\(/g) ?? [], r.filter).toHaveLength(4);
+    }
+    // A font that builds letters from overlapping contours, as Roboto does on Android (viewed, not asserted).
+    await page.addStyleTag({ content: '.mv-wordmark { font-family: Bahnschrift, Roboto, sans-serif !important; }' });
+    await saveShot(page, info, 'wm-title-overlap-font');
+  });
+
+  test('A49: under forced colors the rim is off with the gradient', async ({ page }) => {
+    await page.emulateMedia({ forcedColors: 'active' });
+    await page.goto(url());
+    for (const r of await rimStyles(page)) {
+      expect(r.stroke).toBe('0px');
+      expect(r.filter).toBe('none');
+    }
+  });
+});
+
+// ---- Amendment WM: the wordmark keeps its chrome under a browser's forced dark theme (A51, A52) ----
+
+/** Share of a 4 px strip across the top line, at a fifth of its height (the light part of the chrome), lighter than 0.5. */
+async function chromeShare(page: Page): Promise<number> {
+  const r = await rectOf(page, '.mv-wm-top');
+  const png = await page.screenshot({ clip: { x: r.x, y: r.y + r.h * 0.2, width: r.w, height: 4 } });
+  const { data } = await decode(page, png);
+  let light = 0;
+  for (let i = 0; i < data.length; i += 4) {
+    if (luminance(data[i]!, data[i + 1]!, data[i + 2]!) > 0.5) light++;
+  }
+  return light / (data.length / 4);
+}
+
+test.describe('wordmark: forced dark', () => {
+  test('A51: the UI declares a dark color-scheme', async ({ page }) => {
+    await page.goto(url());
+    expect(await page.evaluate(() => getComputedStyle(document.querySelector('.mv-ui')!).colorScheme)).toBe('dark');
+  });
+
+  test('A52: under Chrome forced dark with the user preferring dark, the chrome stays light; control without the declaration goes dark', async ({ baseURL }, info) => {
+    const o = info.project.use.launchOptions ?? {};
+    const browser = await chromium.launch({ ...o, headless: true, args: [...(o.args ?? []), '--enable-features=WebContentsForceDark'] });
+    try {
+      const share = async (css: string): Promise<number> => {
+        const context = await browser.newContext({ baseURL: baseURL!, viewport: { width: 412, height: 915 }, colorScheme: 'dark' });
+        const page = await context.newPage();
+        if (css !== '') await page.addInitScript((c: string) => {
+          const sheet = new CSSStyleSheet();
+          sheet.replaceSync(c);
+          document.adoptedStyleSheets = [...document.adoptedStyleSheets, sheet];
+        }, css);
+        await page.goto(url());
+        await page.waitForTimeout(500);
+        const v = await chromeShare(page);
+        await context.close();
+        return v;
+      };
+      const shown = await share('');
+      const control = await share('.mv-ui { color-scheme: normal !important; }');
+      console.log(`WM forced dark: light share ${shown.toFixed(3)}, control ${control.toFixed(3)}`);
+      expect(shown, 'chrome kept').toBeGreaterThan(0.2);
+      expect(control, 'forced dark engaged in this browser').toBeLessThan(0.1);
+    } finally {
+      await browser.close();
+    }
+  });
+});
