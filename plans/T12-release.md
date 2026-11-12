@@ -1,12 +1,12 @@
 ---
 id: T12-release
 title: Public release - README, MIT licence, notices, GitHub Pages
-status: in-progress
+status: done
 owner: T12 executor, for the operator
 depends_on: [T10]
 owns: [README.md, LICENSE, THIRD-PARTY-NOTICES.md, CONTRIBUTING.md, docs/screenshots/**, .github/**, plans/T12-release.md]
 reads: [architecture.md, Agents.md, plans/**, package.json, vite.config.ts, src/ui/copy.ts, src/input/keys.ts, src/sim/rules.ts]
-updated: 2026-11-12T18:20Z
+updated: 2026-11-12T18:42Z
 ---
 
 ## 1. Purpose
@@ -393,11 +393,18 @@ Branch protection is verified by reading it back only. The direct test would be 
 - [x] 2026-11-12T18:11Z `npm run check:task -- T12`, for the record: `tsc: VACUOUS, 0 owned files type-checked`, `eslint: VACUOUS, 0 owned files linted`, `vitest: not applicable`, `glsl: 0 owned files scanned, 0 hits`, `check:task T12 FAIL`, as R-6 expected.
 - [x] 2026-11-12T18:14Z The operator, verbatim: "Proceed with the fix for the 4 lines." `tests/boundaries/gates.test.ts`: the title, the row list with `'T12'`, and the two `12 plans` strings now `13 plans`, through T00's PR-3. That file alone: `40 passed (40)`.
 - [x] 2026-11-12T18:20Z **A2 passes.** `npm run check` exit 0: `Test Files 119 passed (119)`, `Tests 1990 passed | 2 skipped (1992)`, `glsl:check: 189 files scanned, 0 hits`. The counts equal the fresh clone's before T12. A1 again: `13 plans, 3187 pattern pairs, 0 problems`. A6 again: 0 lines.
-- [ ] M4 **Stopped at Gate 1.** Nothing is staged or committed. Waiting for the operator's word to commit and push.
-- Remaining: Gate 1 (three commits, the push, A7 and A8), Gate 2, M6 and M7.
-- [ ] M5 Gate 2 presentation.
-- [ ] M6 Publish, A9 to A12.
-- [ ] M7 Close.
+- [x] 2026-11-12T18:28Z M4 **Gate 1 released** by the operator, verbatim: "Gate 1 released go". Three commits by the repo-local identity, no attribution lines: `086c514` (this plan, the registration, T00's amendment, the gates test), `cae2f58` (the release files, `package.json`, the lockfile, `Agents.md`), `5708083` (the identifier replacements). `git push origin main`: `6afd289..5708083`, exit 0. The stored credential could push the workflow file.
+- [x] 2026-11-12T18:29Z **A8 passes.** Actions run 43280153722 for `5708083`, event `push`: job `build` `success` on `ubuntu-latest` in 73 s (Node v24.14.1, `added 139 packages`, `vite v8.3.5`, `built in 512ms`); job `deploy` `skipped`. The four files it built have the same names, content hashes included, as the Windows build: `app-CHcO9ut3.js` 868.91 kB, `index-DWbLPmpn.js`, `harness-BSIgpiTj.js`, `testHook-DMG-gi9O.js`. The `github-pages` artifact is 260,230 bytes. One annotation: `ubuntu-latest` is moving to Ubuntu 26.
+- [x] 2026-11-12T18:35Z **A7 passes.** A fresh clone from `origin` at `5708083`: `npm ci` exit 0 against the hand-edited lockfile, `npm run build` exit 0, `npm run plans:check` `13 plans, 3187 pattern pairs, 0 problems`, `npm run check` exit 0 (`119 passed (119)`, `1990 passed | 2 skipped (1992)`, `glsl:check: 189 files scanned, 0 hits`), the identifier scan 0 lines, the bare user name in 0 files, secret-shaped strings 0, and a clean `git status` after the build. `git ls-remote origin`: one ref, `refs/heads/main`, at `5708083`. The API reads `visibility: private` and `license.spdx_id: MIT`.
+- [x] 2026-11-12T18:35Z M5 **Stopped at Gate 2.** Presented to the operator: the one ref; A7 and A8; the scans; the residuals; the commands of M6. For the residual record: the user-name paths are in the diffs of `e732a82` (added) and `5708083` (removed), and the tailnet address in `e732a82` (added), `086c514` and `5708083` (removed), so all three stay readable in history.
+- [x] 2026-11-12T18:38Z M6 **Gate 2 released** by the operator, verbatim: "Gate 2 released". `git ls-remote origin` read one ref, `main` at `5708083`, immediately before. `gh repo edit --visibility public --accept-visibility-change-consequences` exit 0 between 18:38:27Z and 18:38:30Z; the API then read `visibility: public`.
+- [x] 2026-11-12T18:39Z Pages enabled: `POST .../pages` with `build_type=workflow` returned `html_url` `https://highsierralabs.github.io/Midnight_Vector/`, `https_enforced: true`. `gh workflow run pages.yml --ref main`: run 43281990994 at `5708083`, `build` `success`, `deploy` `success` (10 s). **A9 passes.**
+- [x] 2026-11-12T18:40Z Settings. Description, homepage and seven topics set. `PUT .../vulnerability-alerts` and `PUT .../private-vulnerability-reporting` exit 0. Branch protection on `main`, body `{"required_status_checks": null, "enforce_admins": true, "required_pull_request_reviews": null, "restrictions": null, "allow_force_pushes": false, "allow_deletions": false}`: accepted. Secret scanning and push protection, body `{"security_and_analysis": {"secret_scanning": {"status": "enabled"}, "secret_scanning_push_protection": {"status": "enabled"}}}`: accepted. Both bodies were right as written from memory.
+- [x] 2026-11-12T18:42Z **A12 passes,** read back through the API: description, homepage and topics (`game`, `glsl`, `procedural-generation`, `synthwave`, `threejs`, `typescript`, `webgl`) as set; `license.spdx_id` `MIT`; on `main`, `allow_force_pushes` false, `allow_deletions` false, `enforce_admins` true, no required reviews or checks; dependency alerts 204 (enabled); private vulnerability reporting `enabled: true`; secret scanning and push protection `enabled`. Dependabot security updates stay `disabled`, as intended: nothing here opens pull requests.
+- [x] 2026-11-12T18:42Z **A10 passes.** `curl` on the Pages address: `/` 200 (3698 bytes), `assets/index-DWbLPmpn.js` 200, `assets/app-CHcO9ut3.js` 200 (868,918 bytes), `assets/harness-BSIgpiTj.js` 200, `LICENSE` 200 (1073 bytes, first line `MIT License`), `THIRD-PARTY-NOTICES.md` 200 (2273 bytes).
+- [x] 2026-11-12T18:42Z **A11 passes.** The cached headless Chromium with the `gpu` flags, 1600 x 900, on the live address: status 200, no redirect; `data-mv-boot` reached `running`; `data-mv-mode` `demo`, then `play` after a real click on LAUNCH; 0 console errors, 0 page errors, 0 failed requests; the only host requested was `highsierralabs.github.io`. **Viewed** `live-play.png`: a run in sector S00 SUNSET DRIVE with the HUD (score 3800, SYNC x3, three shield pips, the overdrive bar), the banded sun, the ship, a ring, shards, chevrons on both sides pointing at the road, and a traffic car ahead.
+- [x] 2026-11-12T18:42Z For HC3, what an agent can check: GitHub's rendered README has the four image sources and every link of section 4.1, and `title.png` is served from the repository (200, 2,146,452 bytes). How it looks is the operator's check.
+- [x] 2026-11-12T18:42Z M7 Close. Outcomes written, status `done` with HC1 to HC3 open. This plan's edits since `086c514` are not committed; the closing commit waits for the operator's word, and pushing it redeploys the same game.
 
 ## 10. Surprises and discoveries
 
@@ -432,9 +439,25 @@ None. T12 touches nothing under `src/contracts/**`.
 
 ## 13. Outcomes and retrospective
 
-Not written yet. Known in advance, and to be confirmed or corrected at M7:
+**Result against Purpose, on the evidence in section 9:**
 
-**Residuals the operator accepted on 2026-11-12:**
+1. **Met for the agent's checks.** The game is served at `https://highsierralabs.github.io/Midnight_Vector/`, boots and launches a run in a desktop Chromium with no error (A10, A11). Phones and the operator's own browsers are HC1 and HC2.
+2. **Met.** The repository is public and GitHub renders the README with its four screenshots and links (A9, A12, and the note for HC3).
+3. **Met.** `LICENSE` is MIT with the operator's copyright line, GitHub reads it as MIT, and the two libraries' licence texts are in the repository and on the site beside the game.
+4. **Met as built, proven once.** The workflow built on Linux for a push while private and deployed on a manual run once public. A deploy triggered by a push to the public repository has not happened yet; the closing commit's push will be the first.
+5. **Met for the current files** (A6, A7: 0 lines). Not for history, as chosen (below).
+6. **Met by read-back** (A12). Not tested by attempting a force-push.
+
+**Open human checks:** HC1 (phone), HC2 (desktop browser), HC3 (the README on github.com).
+
+**What happened that the plan did not foresee:**
+
+- T00's gates test pinned 12 tasks, so registering T12 failed `npm run check` until four lines changed, with the operator's agreement. The audit should have searched the tests for the task count before the plan promised no test would change.
+- A5 as written would have rebuilt `dist/` under the operator's running server. It was run against a scratch folder instead.
+- The API's read of the secret-scanning switches lagged a few seconds behind the write, and read `disabled` once before reading `enabled` twice.
+- Dependabot opened one alert at once: `minimatch`, development scope, medium, the advisory §2 already names. It is not in the shipped game, and `Agents.md` says not to force the fix.
+
+**Residuals the operator accepted on 2026-11-12, now in effect:**
 
 - Commits `e732a82` to `6afd289` keep the user name, the tailnet address, the device names and the quoted comments, and anyone can read them once the repository is public.
 - The current files keep the device and hardware names, the quoted comments and the original prompt.
@@ -442,11 +465,17 @@ Not written yet. Known in advance, and to be confirmed or corrected at M7:
 **Not verified by this plan:**
 
 - Whether another game or a trademark uses the name "Midnight Vector". Nobody searched.
-- The game on a github.io address, until A10, A11 and the human checks run.
-- The build and the unit tests on Linux, until A8 (build only; R-7).
+- The game on a phone, a tablet, Safari or Firefox at the Pages address, and its sound anywhere: A11 is one headless desktop Chromium on the operator's GPU and cannot hear.
+- The unit tests on Linux. Only the build ran there (R-7).
+- That a force-push or a deletion of `main` is actually refused. The settings were read back, not exercised.
 - The README sentences that restate `architecture.md`.
+- How one replaced path renders: the `<user>` in plain prose in `plans/T11-art-pass.md` (section 10).
+
+**Outside the repository, for the operator:** the workspace notes above this folder still describe the repository as private and say never to add a funnel because it would make the game public. The game is now public through Pages; the tailnet server is unchanged and still tailnet-only.
 
 ## 14. Revision notes
 
 - 2026-11-12T18:11Z Ratified by the operator and executed through M3. Section 4.6's input names are confirmed against each action's `action.yml`. A5 builds to a scratch folder (R-13). Status `blocked`: A2 fails on three assertions in T00's `tests/boundaries/gates.test.ts` that pin 12 tasks, and changing them needs the operator's agreement and contradicts section 3's "no test changes". Sections 9, 10 and 11 updated. Nothing is committed.
 - 2026-11-12T18:20Z Scope widened by four lines, with the operator's agreement ("Proceed with the fix for the 4 lines."): `tests/boundaries/gates.test.ts` now pins 13 tasks, through T00's PR-3. Section 3's table and non-goal say so, and section 6 puts that file in the first commit, with the §12 row it counts. A2 passes. Status `in-progress`, stopped at Gate 1. Nothing is committed.
+- 2026-11-12T18:35Z Gate 1 passed: three commits pushed, A7 and A8 pass. Section 9 updated. Stopped at Gate 2. This note and the Progress entries after `086c514` are not committed.
+- 2026-11-12T18:42Z Gate 2 passed and the plan closed: the repository is public, Pages serves the game, the settings are applied and read back, A9 to A12 pass. Sections 9 and 13 written. Status `done`, with HC1 to HC3 open. The edits to this plan since `086c514` are not committed.
