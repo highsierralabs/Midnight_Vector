@@ -6,7 +6,7 @@ owner: T00 executor
 depends_on: []
 owns: [package.json, package-lock.json, tsconfig*.json, vite.config.ts, vitest.config.ts, playwright.config.ts, eslint.config.js, .gitignore, scripts/**, src/contracts/**, src/core/**, src/testing/**, tests/support/**, tests/boundaries/**, tests/unit/core/**, plans/README.md, plans/T00-foundation.md]
 reads: [architecture.md, Agents.md, plans/**]
-updated: 2026-11-06T12:36Z
+updated: 2026-11-12T18:14Z
 ---
 
 ## 1. Purpose
@@ -657,6 +657,14 @@ Remaining in T00's own paths: nothing. `check:task` on a task with no files yet 
 - [x] 2026-11-06T12:33Z **Whole spec, real files, on gpu:** `npx playwright test tests/support/devshell/devshell.spec.ts --project=gpu --output=test-results/T00-FC` through the GPU lock, exit 0, `18 passed (18.1s)`, no cross in the list, no `Execution context was destroyed`. PICTURE metrics as before: mean chroma 115.08, `blackP10` 16, near-white 0, 15 calls. `npx playwright test tests/support --list` over all four projects: `Total: 51 tests in 6 files`, the control listed twice (gpu and software), and 0 lines naming `consoleguard` or the child's title, so no suite collects the child.
 - [x] 2026-11-06T12:35Z **Gates, code final.** `npm run check:task -- T00` exit 0: `tsc: 49 owned files, 2 configs, 0 problems`, `eslint: 50 owned files, 0 errors, 0 warnings`, `vitest: 14 owned files, exit 0` (425 tests), `glsl: 56 owned files scanned, 0 hits`, `check:task T00 PASS`; the two extra files in each count are the new ones. `npm run plans:check` exit 0, `12 plans, 2648 pattern pairs, 0 problems`. `tests/support/zzdrill/` does not exist. Not run here, by instruction: `npm run check`, `test:browser`, `test:software`; the T00 owner runs them next. Remaining in T00's paths: nothing.
 
+### Amendment PR, public release (operator request, T12)
+
+- [x] 2026-11-12T18:04Z `plans/README.md`: the index row and the order line for T12. The operator ratified `plans/T12-release.md` in session ("Plan is ratified as written. Go."), and the T00 owner gave it the next number.
+- [x] 2026-11-12T18:04Z `package.json`: `description`, `license` (`MIT`), `homepage` and `repository` added after `private`. `"private": true` stays, and no dependency, version, engine or script changed. `package-lock.json`: the root entry gains `"license": "MIT"`, the one line npm itself writes there for a licensed package; edited by hand, because `Agents.md` forbids an ad hoc `npm install`.
+- [x] 2026-11-12T18:04Z Gates: see `plans/T12-release.md` section 9, which records `npm run plans:check` and the whole-repo `npm run check` after these edits. A fresh clone's `npm ci` against the edited lockfile is T12's A7.
+
+- [x] 2026-11-12T18:14Z `tests/boundaries/gates.test.ts`, four lines. The file reads the real `architecture.md` and pinned the number of tasks at 12, so T12's row failed three assertions: the row list at line 71 and `12 plans` at lines 134 and 201 (`3 failed | 1987 passed | 2 skipped`; received 13 rows and `13 plans, 3187 pattern pairs, 0 problems`). Changed: the test's title, the row list (`'T12'` added) and the two `12 plans` strings, now `13 plans`. The operator agreed in session, verbatim: "Proceed with the fix for the 4 lines." The whole-repo result after it is in `plans/T12-release.md` section 9.
+
 ## 10. Surprises and discoveries
 
 All from the 2026-11-05 rehearsal. None of these has run against project code.
@@ -778,6 +786,9 @@ From the VI-gates `test.fail()` repair, on 2026-11-06:
 | The child config has `timeout: 30_000`, the child process is killed at 50 s, and the parent keeps the 60 s default | A hung child then ends inside the parent's own limit, and its `timedOut` status reaches the parent, which fails on it [O: test-timeout drill, 31.7 s]. The child's 30 s is about 19 times its whole run, `stats.duration` 1570 ms in the report. A slower page makes the control fail, not pass | 2026-11-06 | T00 executor |
 | The child config reuses the root config's `gpu` project and `use`, has no `webServer`, and is not a `*.spec.ts` | The child then launches the same browser with the same flags as the parent. The parent run's Vite server is already up on `TERRAIN_PORT`, and with no server the child fails rather than passing. Not matching `**/*.spec.ts` keeps it out of every suite without a skipped test in their counts [O: `--list`, 51 tests, 0 lines naming it] | 2026-11-06 | T00 executor |
 | Drills run on copies in `tests/support/zzdrill/`, not by mutating `pw.ts` in place | `pw.ts` is imported by every sibling's spec and T02 reads `in-progress`. A software run is not necessarily behind the GPU lock, so an in-place mutation could have broken a sibling's run during the window. The copies differ from the live files only in their relative imports and the one mutation, and the runner checks the live hashes after each run | 2026-11-06 | T00 executor |
+| **PR-1: `package.json` states the licence, a description, the Pages address and the repository; `"private": true` stays** | The operator is releasing the game under MIT (T12, R-3). `private` concerns the npm registry, not the repository, and stops an accidental `npm publish` | 2026-11-12 | T00 owner, for the operator |
+| **PR-2: the lockfile's root entry is edited by hand** | The only difference npm would write is `"license": "MIT"` under the root package. A hand edit of that one line keeps every resolved version and integrity hash byte-identical, which an install might not | 2026-11-12 | T00 owner, for the operator |
+| **PR-3: the task-count pins in `gates.test.ts` move from 12 to 13** | They assert how many tasks `architecture.md` §12 has, and it now has 13. The assertions keep their force: the exact row list, the count printed by `plans:check`, and `0 problems` are all still required. An expected value changed, so the operator's agreement was asked for and given | 2026-11-12 | T00 owner, for the operator |
 
 ## 12. Contract change requests
 
@@ -924,6 +935,10 @@ float droneOffset(float amp, float k, float seed, float phase) { return amp * si
 - A probe can test the wrong thing and still produce a clean-looking number. My first check of the literal-import 500 read the document's status, which is 200, and it was the failed expectation that sent me to the browser view.
 - A difference needs a control for what else differs. My first bloom band read a healthy number while sitting partly on the quad that was changing, and only a profile with post off showed it. Asserting that delta to be 0 keeps the band honest if the layer ever moves.
 
+### Amendment PR
+
+`package.json` and the lockfile's root entry now state the MIT licence, and the index lists T12. Nothing T00 provides to other tasks changed. Not verified here: `npm ci` on a fresh clone against the edited lockfile (T12's A7), and what `npm install` would write if it were run.
+
 ## 14. Revision notes
 
 - 2026-11-05T05:55Z Initial draft. No approved revisions, no absorbed requests.
@@ -935,3 +950,5 @@ float droneOffset(float amp, float k, float seed, float phase) { return amp * si
 - 2026-11-05T13:05Z Reopened for three defects from a second independent verifier, before any sibling started. `vitest.config.ts` gains `testTimeout: 30_000`, an acceptance change logged in section 11. `fakeWorld.test.ts` aggregates one test's expects, with the same chunks, fields and bounds. `devshell.spec.ts` gains A11h, `trivialLayer.ts` gains `?alpha=1` and a `setDebugMode` log, `smoke.html` gains `?markworld=1`, `uniforms.test.ts` gains the `2^40 + 127` case. No production or contract code changed. Section 4's 'Dev page' row states the dynamic-import rule. Section 5's M1 and M7 and section 7's A5 are updated, and A9c and A11h are new rows. `plans/T03-terrain.md:289` and the ledger were left to the T00 owner, with the text in section 10. **Siblings:** `createTrivialLayer` keeps its export and its default output, and a grep over the other plans found no use of `__layerLog`, `?alpha` or `?markworld`. Status back to `done`.
 - 2026-11-05T14:05Z Reopened for three defects from a third independent verifier, before any sibling started. Defect 3 applied as a Deviations-level amendment: `devshell.spec.ts` gains A11i, `fakeWorld.test.ts` gains the 126-value, hover and period tests, `trivialLayer.ts` gains `?hot=1`, `window.__frames` and `window.__lastView`, `smoke.html` gains `?otier`. No production or contract code changed. Section 4 gains a T11 palette row, M6 states the hover values, M7 states the new flags, A5 is extended and A11i is a new row. Defects 1 and 2 are left to the T00 owner with the text in section 10, since they edit `plans/T03-terrain.md` and `plans/RECONCILIATION.md`, and they stay listed as open. **Siblings:** `createTrivialLayer` keeps its export and default pixels, and a grep over the other plans found no use of `__frames`, `__lastView`, `?hot` or `?otier`. Status back to `done`.
 - 2026-11-06T12:18Z Reopened for VI-gates' low finding on the bare `test.fail()` control (A11f), acting for the T00 owner. `devshell.spec.ts`'s control now runs `tests/support/devshell/consoleguard.control.ts` through `consoleguard.config.ts`, both new and both under `tests/support/**`, and asserts the child report. Section 3 lists the two files, section 7's A11f row states the new acceptance and its drills, and sections 9, 10, 11 and 13 record the work. `pw.ts`, every contract and every config at the root are unchanged, and `owns` is unchanged. **Siblings:** nothing they import changed. Status back to `done`.
+- 2026-11-12T18:04Z **Amendment PR** (public release, for T12): `plans/README.md` gains the T12 row and order line; `package.json` gains `description`, `license`, `homepage` and `repository`; `package-lock.json`'s root entry gains `"license": "MIT"`. Progress, Decision log (PR-1, PR-2) and Outcomes updated. `owns` and `reads` unchanged. Status stays `done`. Not committed.
+- 2026-11-12T18:14Z **Amendment PR extended:** `tests/boundaries/gates.test.ts` pins 13 tasks instead of 12 (PR-3), four lines, with the operator's agreement. Status stays `done`. Not committed.

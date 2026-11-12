@@ -26,6 +26,7 @@ Select-String -Path plans\T*.md -Pattern '^status:' | ForEach-Object { "$($_.Fil
 | T09 | Forever and perf harness: `window.__mv`, test modes, metric helpers, gate suites | [plans/T09-harness.md](T09-harness.md) | T00 |
 | T10 | Integration: composition root, loop, lifecycle, boot, fallback page, e2e | [plans/T10-integrate.md](T10-integrate.md) | T01 to T09 |
 | T11 | Art pass: tune across modules, all gates green, operator review | [plans/T11-art-pass.md](T11-art-pass.md) | T10 |
+| T12 | Public release: README, licence, notices, contributing guide, screenshots, GitHub Pages workflow | [plans/T12-release.md](T12-release.md) | T10 |
 
 ## Order
 
@@ -34,6 +35,7 @@ T00 (serial, first)
  |-> T01 T02 T03 T04 T05 T06 T07 T08 T09   (fully parallel, against fakes)
       |-> T10 (serial)
            |-> T11 (serial; nothing else writes while it runs)
+           |-> T12 (release files and deploy only; no path in T11's window)
 ```
 
 ## Before spawning executors

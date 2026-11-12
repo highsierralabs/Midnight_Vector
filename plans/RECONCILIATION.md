@@ -1681,7 +1681,7 @@ The sentence now names three costs:
     - For reference, DI-114's whole smoke suite, `dist.spec.ts` included, read 64 passed and 9 skipped. The two-test difference is not checked here.
   - **`fallback.nowebgl.spec.ts` on `no-webgl`**, exit 0, 1 passed. Its output went to `test-results/T08-e2e-nowebgl`, so that the gpu run's folder was not cleared.
   - **After the runs:**
-    - 5100 is still PID 35208, the operator's `vite.js preview --host 100.102.246.127`. 5108, 5110 and 5118 are free, and the lock is released. Each run's dev server ended with it, and no process was stopped.
+    - 5100 is still PID 35208, the operator's `vite.js preview --host <tailnet-ip>`. 5108, 5110 and 5118 are free, and the lock is released. Each run's dev server ended with it, and no process was stopped.
     - `dist/` has no file newer than 14:56:13Z.
     - T08's files have the same hashes at the end of the stage as at its start (`start-sha256.txt`).
   - **Not run in this close:** the `gpu-timing` rows, `dist.spec.ts`, `tests/forever/**`, `tests/perf/**` (B21 included) and `tests/art/**`.
@@ -1734,6 +1734,15 @@ The sentence now names three costs:
 - **Gates.** `npm run check` exit 0 (1980 passed, 2 skipped; glsl 0 hits). `test:browser` through the lock exit 0, 585 passed, 19 skipped (23.5 min; scratchpad `DI119/browser.txt`). `test:software`, `test:art`, `test:forever` and `test:perf` not re-run: no render, sim or shader file changed, but the tag's absence after 4 s can change any frame taken more than 4 s into an autopilot stretch, which T11's A26 re-run will show.
 - **Build.** `dist/` rebuilt (`app-B1JNdeoS.js`, carries `mv-tag-out` and 480). The operator's preview on 5100 was not listening at 2026-11-08 ~17:35Z; restarting it is the operator's step.
 - **Open.** HC10 (an iPhone). iPad Safari (HC9's prefixed path, FH-35). Whether the dim and the tag's 4 s look right on the operator's devices.
+
+**DI-120. Public release: T12 registered, the repository's documents prepared, and two identifiers replaced.**
+- **Source.** The operator, 2026-11-12: the game is to be open-sourced under the MIT licence and published on GitHub Pages from this repository. The operator ratified `plans/T12-release.md` in session, verbatim: "Plan is ratified as written. Go."
+- **T12.** The next number, given by the T00 owner. `architecture.md` §12 gains its row (`README.md`, `LICENSE`, `THIRD-PARTY-NOTICES.md`, `CONTRIBUTING.md`, `docs/screenshots/**`, `.github/**`, `plans/T12-release.md`; depends on T10) and one line in the graph. `plans/README.md` gains the same row and line. T12 owns no game code and writes nothing in T11's window, so T11's `blocked` state does not hold it back.
+- **`Agents.md`.** The Git section no longer says the repository is private, and says that a push to `main` deploys to GitHub Pages once the repository is public.
+- **T00, amendment PR.** `package.json` gains `description`, `license`, `homepage` and `repository`, and the lockfile's root entry gains `"license": "MIT"`. No dependency changed.
+- **Identifiers replaced, at the operator's choice.** The operator's Windows user name, in session scratch paths, now reads `<user>`: 10 lines in `.claude/workflows/terrain-design-docs.js` (which no task owns), `plans/T01-world.md`, `plans/T08-ui-input.md` and `plans/T11-art-pass.md`. The operator's tailnet address now reads `<tailnet-ip>`: 6 lines in this ledger (DI-117's close), `plans/T08-ui-input.md` and `plans/T11-art-pass.md`. Nothing else in those lines changed, and each plan has a revision note. The commits before this one keep both; history is not rewritten.
+- **T00's gates test.** `tests/boundaries/gates.test.ts` pinned 12 tasks in §12 and failed on the thirteenth. Its title, row list and two `12 plans` strings now say 13 (T00's PR-3), with the operator's agreement, verbatim: "Proceed with the fix for the 4 lines."
+- **Open.** Everything in `plans/T12-release.md` from its Gate 1 on: the commit, the push, the first build on Linux, publication and the checks on the live address.
 
 ## Open after this pass
 

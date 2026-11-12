@@ -1778,6 +1778,7 @@ Sync and timer query both track the load, about 0.4 ms apart. **rAF delta with v
 | **T09** | Forever and perf harness: `window.__mv`, test modes, metric helpers, gate suites | `src/harness/**`, `tests/forever/**`, `tests/perf/**`, `tests/unit/harness/**`, `plans/T09-harness.md` | T00 | `plans/T09-harness.md` |
 | **T10** | Integration: composition root, loop, lifecycle, boot, fallback page, e2e | `index.html`, `src/main.ts`, `src/app/**`, `tests/e2e/**`, `tests/unit/app/**`, `plans/T10-integrate.md` | T01-T09 | `plans/T10-integrate.md` |
 | **T11** | Art pass: tune across modules, all gates green, operator review | Temporarily `src/render/**`, `src/world/palettes.ts`, `src/world/biomes.ts`, `src/contracts/glsl/hero.glsl`, `src/feel/tuning.ts`, `src/sim/tuning.ts`; permanently `tests/art/**`, `plans/T11-art-pass.md` | T10 | `plans/T11-art-pass.md` |
+| **T12** | Public release: README, licence, third-party notices, contributing guide, screenshots, GitHub Pages workflow | `README.md`, `LICENSE`, `THIRD-PARTY-NOTICES.md`, `CONTRIBUTING.md`, `docs/screenshots/**`, `.github/**`, `plans/T12-release.md` | T10 | `plans/T12-release.md` |
 
 Parallelism:
 
@@ -1786,6 +1787,7 @@ T00 (serial, first)
  |-> T01 T02 T03 T04 T05 T06 T07 T08 T09   (fully parallel, against fakes)
       |-> T10 (serial)
            |-> T11 (serial; nothing else writes while it runs)
+           |-> T12 (release files and deploy only; no path in T11's window)
 ```
 
 - T03 to T06 get screenshots before integration through `dev/*.html` and `startDevShell`, using `createFakeWorld()`.

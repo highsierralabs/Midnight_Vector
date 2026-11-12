@@ -67,8 +67,8 @@ beforeAll(() => {
 });
 
 describe('section 12 rows', () => {
-  it('finds 12 task rows with owned paths', () => {
-    expect(rows.map((r) => r.task)).toEqual(['T00', 'T01', 'T02', 'T03', 'T04', 'T05', 'T06', 'T07', 'T08', 'T09', 'T10', 'T11']);
+  it('finds 13 task rows with owned paths', () => {
+    expect(rows.map((r) => r.task)).toEqual(['T00', 'T01', 'T02', 'T03', 'T04', 'T05', 'T06', 'T07', 'T08', 'T09', 'T10', 'T11', 'T12']);
     expect(rows.every((r) => r.owns.length > 0)).toBe(true);
   });
 });
@@ -131,7 +131,7 @@ describe('check:task, a tsconfig cannot silently skip an owned file', () => {
 describe('plans:check', () => {
   it('passes a clean plan set generated from section 12', () => {
     const r = plansCheck(makePlans('clean'));
-    expect(r.out).toContain('12 plans');
+    expect(r.out).toContain('13 plans');
     expect(r.out).toContain('0 problems');
     expect(r.code).toBe(0);
   });
@@ -198,7 +198,7 @@ describe('plans:check', () => {
     writeFileSync(join(root, 'plans/RECONCILIATION.md'), '# Ledger\n\nNot a plan.\n');
     writeFileSync(join(root, 'plans/README.md'), '# Index\n');
     const r = plansCheck(root);
-    expect(r.out).toContain('12 plans');
+    expect(r.out).toContain('13 plans');
     expect(r.code).toBe(0);
   });
 
