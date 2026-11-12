@@ -14,6 +14,8 @@ export interface Menu {
    */
   setOpen(open: boolean, ring: boolean): void;
   toggleMute(): void;
+  /** Amendment LH: a start button chose the HUD. The same setting as the HIDE HUD box, written only on a change. */
+  chooseHud(hide: boolean): void;
   /** Keydown on window: Tab with the focus outside the open dialog goes back into it. */
   guardTab(e: KeyboardEvent): void;
   /** The OS preference changed. Followed only while the player has set no override. */
@@ -143,6 +145,13 @@ export function createMenu(
       if (at instanceof HTMLElement && dom.cruise.contains(at)) at.blur();
     },
     toggleMute() { setMuted(!settings.muted); },
+    chooseHud(hide) {
+      if (hide === settings.hideHud) return;
+      settings.hideHud = hide;
+      dom.hideHud.checked = hide;
+      setHideHud(hide);
+      persist();
+    },
     guardTab(e) {
       if (!open || e.code !== 'Tab') return;
       if (dom.cruise.contains(document.activeElement)) return;

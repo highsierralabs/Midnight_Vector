@@ -20,7 +20,10 @@ export interface UiDom {
   readonly root: HTMLElement;
 
   readonly title: HTMLElement;
+  /** LAUNCH, with the HUD. Keeps the contract's `launch` hook. */
   readonly launch: HTMLButtonElement;
+  /** Amendment LH: LAUNCH - NO HUD. */
+  readonly launchNoHud: HTMLButtonElement;
   readonly best: Text;
 
   readonly hud: HTMLElement;
@@ -89,11 +92,12 @@ function rangeRow(doc: Document, label: string, hook: string): { row: HTMLElemen
 export function buildDom(doc: Document, root: HTMLElement): UiDom {
   // Title.
   const best = doc.createTextNode('');
-  // ui.css shows one of the three: the loading line until html[data-mv-boot] reads running (DI-95), then the pointer's.
-  const launch = h(doc, 'button', { type: 'button', class: 'mv-launch', 'data-mv': 'launch' },
-    h(doc, 'span', { class: 'mv-if-fine' }, copy.PROMPT_KEY),
-    h(doc, 'span', { class: 'mv-if-coarse' }, copy.PROMPT_TOUCH),
+  // Amendment LH: two start buttons. ui.css shows LOADING in LAUNCH until html[data-mv-boot] reads running (DI-95).
+  const launch = h(doc, 'button', { type: 'button', class: 'mv-launch mv-launch-hud', 'data-mv': 'launch' },
+    h(doc, 'span', { class: 'mv-launch-label' }, copy.LAUNCH_HUD),
     h(doc, 'span', { class: 'mv-if-loading' }, copy.PROMPT_LOADING));
+  const launchNoHud = h(doc, 'button', { type: 'button', class: 'mv-launch mv-launch-nohud', 'data-mv': 'launch-nohud' },
+    h(doc, 'span', { class: 'mv-launch-label' }, copy.LAUNCH_NO_HUD));
   const title = h(doc, 'div', { class: 'mv-title', 'data-mv': 'title', 'data-attract': '0' },
     h(doc, 'h1', { class: 'mv-wordmark', 'data-mv': 'wordmark', 'aria-label': 'Midnight Vector' },
       h(doc, 'span', { class: 'mv-wm mv-wm-top', 'aria-hidden': 'true' }, 'MIDNIGHT'),
@@ -102,7 +106,7 @@ export function buildDom(doc: Document, root: HTMLElement): UiDom {
     h(doc, 'div', { class: 'mv-title-bottom' },
       h(doc, 'p', { class: 'mv-tagline' }, copy.TAGLINE),
       h(doc, 'p', { class: 'mv-best', 'data-mv': 'best' }, best),
-      launch,
+      h(doc, 'div', { class: 'mv-launches' }, launch, launchNoHud),
       legend(doc, 'mv-if-fine', copy.LEGEND_KEYS),
       legend(doc, 'mv-if-coarse', copy.LEGEND_TOUCH)));
 
@@ -234,7 +238,7 @@ export function buildDom(doc: Document, root: HTMLElement): UiDom {
   );
 
   return {
-    root, title, launch, best, hud, score, scoreEl, sync, syncEl, shields, overdrive, overdriveFill, km, sector, objective,
+    root, title, launch, launchNoHud, best, hud, score, scoreEl, sync, syncEl, shields, overdrive, overdriveFill, km, sector, objective,
     menuButton, boostButton, popups, popupText, banner, bannerTitle, bannerObjective, bannerGrade, autoTag, live,
     cruise, resume, music: music.range, sfx: sfx.range, mute: mute.box, quality, autoLabel,
     fullscreen: fullscreen.box, fullscreenRow: fullscreen.row, hideHud: hideHud.box, reduced: reduced.box,

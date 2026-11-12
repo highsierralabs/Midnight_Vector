@@ -16,7 +16,7 @@ import { createRunMeter } from './run';
 import { createAttrSlot, createGate, type Gate, type Slot } from './slots';
 import { createBestsTracker, loadSettings, type BestsTracker, type StoreLike } from './storage';
 import { ensureStyle } from './style';
-import { createTitle, type Title } from './title';
+import { createTitle, launchChoice, type Title } from './title';
 import { MODE_NAMES, Panel, buildViewTable, deriveView, hudHidden, hudInert, menuHidden } from './view';
 
 const NO_YES = ['0', '1'] as const;
@@ -151,22 +151,27 @@ export const createUi: CreateUi = () => {
     reach.write(Panel.TITLE);
     const bests = createBestsTracker(pageStore);
 
-    function tryLaunch(): void {
-      // DI-95: a press while the app still loads would start the run and its audio under a title that stays drawn. The
-      // attribute is read in the handler, which reads no layout; ui.css shows LOADING from the same attribute.
-      if (lastMode === SimMode.DEMO && !fatal && bootReady(document.documentElement.getAttribute('data-mv-boot'))) cmd.launch();
-    }
-    function tryToggle(): void {
-      if (!fatal && (lastMode === SimMode.PLAY || lastMode === SimMode.CRUISE)) cmd.togglePause();
-    }
-
-    const title = createTitle(dom, bests.current, tryLaunch);
     const menu = createMenu(
       dom, cmd, settings, pageStore,
       (on) => { root.setAttribute('data-muted', on ? '1' : '0'); },
       (on) => { root.setAttribute('data-hide-hud', on ? '1' : '0'); },
       reduced,
     );
+
+    /** hideHud: a start button's choice, or null for the remembered setting (amendment LH, LH-3). */
+    function tryLaunch(hideHud: boolean | null): void {
+      // DI-95: a press while the app still loads would start the run and its audio under a title that stays drawn. The
+      // attribute is read in the handler, which reads no layout; ui.css shows LOADING from the same attribute.
+      if (lastMode !== SimMode.DEMO || fatal || !bootReady(document.documentElement.getAttribute('data-mv-boot'))) return;
+      // Before the launch, so the run's first PLAY frame already has the chosen HUD.
+      if (hideHud !== null) menu.chooseHud(hideHud);
+      cmd.launch();
+    }
+    function tryToggle(): void {
+      if (!fatal && (lastMode === SimMode.PLAY || lastMode === SimMode.CRUISE)) cmd.togglePause();
+    }
+
+    const title = createTitle(dom, bests.current, tryLaunch);
     wireFullscreen(dom, leave);
 
     dom.resume.addEventListener('click', tryToggle);
@@ -203,7 +208,8 @@ export const createUi: CreateUi = () => {
         // FH-7: in fullscreen Esc is the browser's, which leaves fullscreen with it; from PLAY, FH-8 then opens CRUISE.
         if (!e.repeat && !(code === 'Escape' && escIsBrowsers(document))) tryToggle();
       } else if (!e.repeat && isLaunchKey(code, false, false, false)) {
-        tryLaunch();
+        // LH-3: a key launches the focused start button's choice, and anywhere else the remembered one.
+        tryLaunch(launchChoice(dom, document.activeElement));
       }
     });
     window.addEventListener('pointerdown', () => { title.noteActivity(); }, { passive: true });
@@ -232,7 +238,9 @@ export const createUi: CreateUi = () => {
     // there for Enter and a screen reader, and the ring returns as soon as a keyboard moves it.
     const coarse = window.matchMedia('(pointer: coarse)').matches;
     keyboardFocus = !coarse;
-    dom.launch.focus(coarse ? { preventScroll: true, focusVisible: false } : { preventScroll: true });
+    // LH-4: the start button that matches the remembered choice, so a key alone repeats it.
+    const start = settings.hideHud ? dom.launchNoHud : dom.launch;
+    start.focus(coarse ? { preventScroll: true, focusVisible: false } : { preventScroll: true });
   }
 
   function frame(v: Readonly<FrameView>): void {

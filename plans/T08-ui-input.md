@@ -6,7 +6,7 @@ owner: T08 executor
 depends_on: [T00]
 owns: [src/ui/**, src/input/**, dev/ui.html, tests/unit/input/**, tests/unit/ui/**, tests/visual/ui.spec.ts, plans/T08-ui-input.md]
 reads: [architecture.md, Agents.md, src/contracts/**, src/core/**, src/testing/**, tests/support/**, plans/T00-foundation.md]
-updated: 2026-11-11T16:05Z
+updated: 2026-11-11T18:20Z
 ---
 
 ## 1. Purpose
@@ -32,6 +32,13 @@ The operator asked, while reviewing on a phone and a tablet: "Two feature reques
 10. The card gains one row, FULLSCREEN, HIDE HUD, REDUCED MOTION, aligned with the quality radios, and still fits at every size A9 checks without scrolling, as before. Nothing else about the look changes (T11 is waiting on the operator's verdict of the look).
 
 **FH review round 1 (FH-R1), 2026-11-07.** The first review asked for changes and approved nothing. Eight findings are answered in place below, each marked `FH-R1 (n)` with the superseded text struck through, not deleted; the revision note in section 14 lists them. Purpose items 8 to 10 do not change.
+
+### Amendment LH, 2026-11-11: LAUNCH with or without the HUD (operator request, approved in session)
+
+The operator asked: "I want to let the user to start the game with or without the hud. Change the start button to two buttons, one to start with the hud and the other without the hud. Keep the option in the cruise menu so the user can switch." What a player sees after LH:
+
+11. **Two start buttons on the title**, **LAUNCH** and **LAUNCH - NO HUD**, in place of the one PRESS ANY KEY / TAP TO LAUNCH button. LAUNCH starts a run with the HUD shown; LAUNCH - NO HUD starts it with the HUD hidden exactly as FH's HIDE HUD hides it. The choice is the same remembered setting as the CRUISE card's HIDE HUD box, which stays and still switches it during a run.
+12. **Any key, or a tap or click on the title away from the buttons, still launches**, with the remembered choice. At load the focus sits on the button that matches it, so a key press launches "the focused button", and Tab reaches the other.
 
 ## 2. Context and orientation
 
@@ -127,6 +134,8 @@ No change is planned to `src/input/**` (a second finger and the boost button are
 - Skipping HUD writes while it is hidden. The frame path is unchanged.
 - A true pause. That is T11's operator question Q14, not this task.
 - Writing `dist/`, running `npm run build`, `tests/e2e/dist.spec.ts` or `tests/art/**`, or touching the operator's preview on port 5100.
+
+**Amendment LH, scope.** Inside `owns`, unchanged: `src/ui/copy.ts`, `dom.ts`, `title.ts`, `menu.ts`, `index.ts`, `ui.css`, `tests/visual/ui.spec.ts`, this plan. No contract change: `UiCommands.launch()` keeps its signature, and the HUD choice is the UI's own business as under FH-16. The `launch` DOM hook named in `src/contracts/index.ts` keeps its element (LAUNCH, HUD shown), so T09, T10 and T11 tests that click `[data-mv="launch"]` keep their meaning; the new hook `launch-nohud` is T08's own. Non-goals: no storage-format change (the `hideHud` field from FH carries the choice), no change to `src/input/**`, `gesture.ts`, `devPage.ts`, `dev/ui.html` or any other task's path.
 
 ## 4. Interfaces
 
@@ -651,6 +660,21 @@ All browser rows are in `tests/visual/ui.spec.ts` on `gpu`, port 5108, through t
 - **HC12.** HIDE HUD on the operator's phone and tablet: in PLAY only II is left, a second finger still boosts, a tap on II opens the menu, and the setting survives a reload. And whether the autopilot tag should stay with the HUD hidden (section 11 keeps it).
 - **HC13.** Whether the new row looks like part of the card, and whether II alone, at full strength, looks right with the HUD hidden (section 11 does not dim it).
 
+### Amendment LH, validation and acceptance
+
+All browser rows in `tests/visual/ui.spec.ts` on `gpu`, port 5108. Fail-before is the new rows run against the unchanged source at `HEAD` (`git stash push -- src/ui`). No threshold moves; expected-output edits are E5, in section 11.
+
+| # | Command or action | Expected |
+|---|---|---|
+| A42 | Title, fine and coarse pointer | Buttons named exactly LAUNCH and LAUNCH - NO HUD are visible, each at least 44 x 44 px, inside the viewport at 1920x1080 and 390x844. Fail-before: no LAUNCH - NO HUD button |
+| A43 | Click LAUNCH - NO HUD, stored `hideHud` false | `launch` recorded; root `data-hide-hud` 1; stored `hideHud` true; in PLAY the readouts are hidden as in FH's rows; in CRUISE the HIDE HUD box is ticked. Fail-before: no button |
+| A44 | Click LAUNCH, stored `hideHud` true | `launch` recorded; `data-hide-hud` 0; stored `hideHud` false; HIDE HUD box unticked; readouts visible in PLAY. Fail-before: the stored true is kept |
+| A45 | Load with stored `hideHud` true, press key `a` | Focus at load is on `launch-nohud`; the key launches with `data-hide-hud` still 1. With defaults the focus is on `launch` and the key launches with 0. Fail-before: focus on `launch` |
+| A46 | Tab from LAUNCH to LAUNCH - NO HUD, then Enter; and a touch tap away from the buttons with stored `hideHud` true | Enter launches with `data-hide-hud` 1. The tap launches and keeps 1 |
+| A47 | `check:task -- T08`, then the whole `ui.spec.ts` on `gpu` | Exit 0; every existing row passes, with only the E5 edits |
+
+**Human check HC14.** On a phone and a desktop: the two buttons read as a primary and a secondary choice, both are easy to hit, and starting without the HUD then unticking HIDE HUD in CRUISE brings the HUD back. Not verified by an agent.
+
 ## 8. Idempotence and recovery
 
 - All test and check commands are safe to re-run. Browser tests use fresh contexts, so `localStorage` starts empty and nothing persists between runs.
@@ -1140,6 +1164,18 @@ Reopened by the T00 owner for the operator's request (section 14). Planning only
   - Section 13 FH gains its close, and section 14 a note.
   - Status `done`. The open human checks are HC1 to HC13, and none blocks `done`.
 
+### Amendment LH, LAUNCH with or without the HUD (operator request)
+
+- [x] 2026-11-11T18:00Z Approved by the operator in session, by answering the four design questions: any key still launches; the choice is remembered in the same setting; labels LAUNCH / LAUNCH - NO HUD; approve and build. Status `in-progress`. Plan backup: session scratchpad `LH/T08-ui-input.before-LH.md`.
+- [x] 2026-11-11T18:05Z LH code: `copy.ts` (LAUNCH_HUD, LAUNCH_NO_HUD; PROMPT_KEY and PROMPT_TOUCH removed, LH-5), `dom.ts` (the two buttons in `.mv-launches`, new `launchNoHud` reference), `title.ts` (new `launchChoice`; pointerup and click pass the button's choice), `menu.ts` (new `chooseHud`, a no-op when unchanged), `index.ts` (`tryLaunch(hideHud)` applies the choice only when the launch is allowed; a key passes the focused button's choice; focus at mount follows the stored choice), `ui.css` (row, secondary size, loading rules, attract selector). `npm run check:task -- T08`: tsc 0 problems, eslint 0 errors 0 warnings, vitest 11 files 218 tests passed, glsl 0 hits, PASS.
+- [x] 2026-11-11T18:10Z LH tests in `tests/visual/ui.spec.ts`: E5 edits (three `PRESS ANY KEY` and one `TAP TO LAUNCH` lookups now `{ name: 'LAUNCH', exact: true }`; the cold-load row expects `LAUNCH`), and two new describes, `launch: hud choice` (A42, A43, A44, A45 twice, A46, a control) and `launch: hud choice, touch` (A42 phone, A46 tap away, a tap on LAUNCH - NO HUD). Run on `gpu`, port 5108, `-g "launch: hud choice|gesture: boot|cold load|roles and names"`: **14 passed (16.9 s)**. Cold load: press at 583 ms `boot=loading prompt=LOADING`, mode stays demo; once running the prompt reads `LAUNCH` and the second press builds a running AudioContext.
+- [x] 2026-11-11T18:15Z **Fail-before**, the ten new rows against `HEAD`'s `src/ui` (`git stash push -- src/ui`, then `git stash pop`): **7 failed, 3 passed.** Failed: A42 (no LAUNCH - NO HUD button), A43 and the touch tap on it (no element), A44 (`data-hide-hud` stays 1), A45 stored-hidden (focus on `launch`), A46 Tab+Enter (Tab leaves the title), A42 phone (one button). Passed both before and after, as guards: A45 stored-shown, the control, and the touch tap away from the buttons, which pin behaviour LH must not change.
+- [x] 2026-11-11T18:15Z **Viewed** `lh-title.png` (1920x1080): LAUNCH, focused with the yellow ring, beside the smaller LAUNCH - NO HUD, both on one row above the legend, the tagline and BEST above. `lh-title-phone.png` (390x844 at CSS scale): both buttons on one row inside the width, NO HUD slightly shorter, legend below. `title-loading-phone.png`: LOADING in LAUNCH and LAUNCH - NO HUD in the same muted cyan outline. No overlap, no clipping.
+- [x] 2026-11-11T18:00Z A47, whole `ui.spec.ts` on `gpu`, port 5108: **297 passed, 2 failed (3.3 m).** Both failures were rows that leaned on the single launch button, not product defects (section 10, LH): the `firstshow: panels` control (its Tab from the focused LAUNCH now lands on LAUNCH - NO HUD, so it no longer reaches the exposed panels) and `contrast: title text over the scene` (its selector `.mv-launch > .mv-if-fine` named the removed prompt span). Fixed as E6 (section 11). A type-only edit to `title.ts` (`EventTarget | Element | null` to `EventTarget | null`) landed while this run was in progress; neither failure is related to it.
+- [x] 2026-11-11T18:01Z Rerun `-g "firstshow: panels|title text over the scene"`: **4 passed.** The guarded row reads `no problem`; its control again lists `Tab reaches the hidden hud` with the eight other exposures, so the row's Tab check can fail again. Contrast: `.mv-launch-hud > .mv-launch-label` 18.27, `.mv-launch-nohud > .mv-launch-label` 18.36.
+- [x] 2026-11-11T18:07Z `npm run check`, whole repo: **exit 0**; vitest 119 files, 1990 passed, 2 skipped; glsl 189 files, 0 hits.
+- [x] 2026-11-11T18:08Z T10's `tests/e2e/modes.spec.ts` on `gpu`, port 5110 (launch by click and by key on the real app): **6 passed.** Read-only for T08: run, not edited.
+
 ## 10. Surprises and discoveries
 
 All from 2026-11-05 scratchpad rehearsals on Chromium 1234. None has run against project code.
@@ -1289,6 +1325,10 @@ That rehearsal page had `touch-action: none` on `body`, so the drag rows hold on
 
 - **A command called inside `ui.frame` changes the frame being drawn, on the app but not on the dev page** [O]. On the app `FrameView.sim` is the sim's live state and `sim.command` applies at once (section 10's FH-V1 correction above). FH-8's `togglePause` therefore set autopilot on, and mode CRUISE, in the middle of a frame that had already read mode PLAY. That frame derived `hud auto`, drew the AUTOPILOT tag and announced it. The dev page's `togglePause` changed only the mode it would script for the next frame, so every FH row saw a clean PLAY-to-CRUISE change and could not catch this. On the unfixed code the dev row, once the dev page models the sim (FH-37), read `hud auto`, `play`, `AUTOPILOT - ANY INPUT RETAKES` and focus on body for the first frame after the exit, and the app recorder read the tag view and the announcement in batch 5, the mode in 6 and the card in 7 [O: `T08-fs/fv1/fb-dev.log`, `fb-app.log`]. The root cause was a misreading in this plan: "queues a command" (sections 4 and 10, corrected in place).
 - **Dev-page screenshots are not byte-stable between runs** [O]. On identical source, FH's `fh-review` and `fh-full` runs differed in 7 of 28 `review: FH` images (`fs-shots` against `fh-full`, by `cmp`). So a byte comparison cannot show whether a change moved an image; a view or a pixel measure has to.
+
+### Amendment LH
+
+- Two existing rows depended on the title having exactly one focusable control and one prompt span, which LH removes: the `firstshow: panels` Tab check (`warmProblems` pressed Tab once from the focused launch button) and the title contrast row (`.mv-launch > .mv-if-fine`). The full run caught both: `Expected: true, Received: false` at the control's `Tab reaches the hidden` line, and `getComputedStyle ... parameter 1 is not of type 'Element'` at the contrast row. The guarded firstshow row itself kept passing, but its Tab check had become one that could not fail.
 
 ## 11. Decision log
 
@@ -1469,6 +1509,18 @@ That rehearsal page had `touch-action: none` on `body`, so the drag rows hold on
 | E2. `a11y: the keyboard alone can do all of it` | The Tab cycle from RESUME goes from 6 presses, `music, sfx, mute-toggle, INPUT, reduced, resume`, to 8, `music, sfx, mute-toggle, INPUT, fullscreen, hide-hud, reduced, resume`. Without it the row fails at `seen[4]`. The slider and radio steps after it are unchanged, since the new boxes come after the radios | 2026-11-07 | T08 executor |
 | E3. `storage: settings and bests survive reload in one context` | The stored settings object is expected with `hideHud: true`, the row ticks HIDE HUD with the others, and checks it ticked after the reload. Without it the row fails on the new key | 2026-11-07 | T08 executor |
 | E4. `tests/unit/ui/storage.test.ts`, `defaults when nothing is stored` and `round trips` | The defaults literal gains `hideHud: false`, and the round-trip value `hideHud: true`, which the `Settings` type also requires | 2026-11-07 | T08 executor |
+
+**Amendment LH decisions** (2026-11-11, T08 executor, operator-approved in session):
+
+- **LH-1.** Two buttons replace the prompt button: LAUNCH (`data-mv="launch"`, HUD shown) and LAUNCH - NO HUD (`data-mv="launch-nohud"`, HUD hidden). Labels are the operator's. LAUNCH keeps the `launch` hook so other tasks' tests keep clicking the same thing.
+- **LH-2.** Both buttons write FH's `hideHud` setting through the menu: the HIDE HUD box, the root's `data-hide-hud` and storage, only when the value changes. No new setting and no storage change, so the title and the CRUISE box always agree, and a stored choice survives a reload.
+- **LH-3.** Any launch key and a tap or click on the title away from the buttons still launch, with the remembered setting (operator's answer). A key pressed while a start button has focus launches with that button's choice; a pointer on a button launches with its choice. The choice is applied only when the launch itself is allowed (DEMO, not fatal, boot running).
+- **LH-4.** At mount focus goes to the button matching the stored setting, so a key alone repeats the remembered choice and the A24 ring rule is unchanged.
+- **LH-5.** `PROMPT_KEY` and `PROMPT_TOUCH` leave `copy.ts`, as nothing reads them; the button labels name the action. `PROMPT_LOADING` stays.
+- **LH-6.** While loading (DI-95) LAUNCH reads LOADING as before, and LAUNCH - NO HUD keeps its label in the same muted loading style. Both stay focusable, so LH-4 works during loading, and the existing `bootReady` guard stops both.
+- **LH-7.** The pair sits in one `.mv-launches` row that wraps on a narrow screen; LAUNCH - NO HUD is drawn smaller, as the secondary choice. The attract fade keeps the row (selector `:not(.mv-launches)`).
+- **E5.** Expected-output edits, no threshold moved: rows that found the button by the name PRESS ANY KEY or TAP TO LAUNCH now find LAUNCH with an exact name match; the cold-load row expects the prompt LAUNCH.
+- **E6.** Two fixture edits found by A47, no threshold moved. `warmProblems` focuses `[data-mv="launch-nohud"]`, the title's last focusable control, before its Tab, as it once tabbed from the only one; the control shows the check fails when the panels are exposed. The title contrast row measures both buttons' labels in place of the removed prompt span, so it now covers two elements where it covered one.
 
 ## 12. Contract change requests
 
@@ -1712,6 +1764,16 @@ Lessons:
 
   T11's operator pack collects them. Its final5 pack predates FH and does not show the new row.
 
+### Amendment LH
+
+**Result against Purpose items 11 and 12: met.** The title shows LAUNCH and LAUNCH - NO HUD; each starts a run with its HUD choice, writes FH's `hideHud` setting, and leaves the CRUISE box in agreement; the box still switches the HUD mid-run (A43). Any key and a tap off the buttons still launch with the remembered choice, and focus at load sits on the matching button (A45, A46). Evidence is in section 9: 10 new rows with a 7-fail, 3-guard fail-before; the whole `ui.spec.ts` green after E6; `npm run check` exit 0; T10's `modes.spec.ts` 6 passed; screenshots viewed at 1920x1080 and 390x844, and while loading.
+
+**HC14:** the operator reported on 2026-11-11, after testing the rebuilt preview over the tailnet on their phone: "The buttons are working as they should." Recorded as passed on the operator's phone; a desktop browser was not named in the report.
+
+**Not verified:** iOS Safari was not tested. No independent verifier reviewed LH. The operator approved the amendment and asked for it to be built in the same session. T10's `test:smoke` and the T11 art suites, which click `[data-mv="launch"]`, were not run. That hook kept its element and meaning, so their outcome is inferred, not observed. `software` was not run, because every row in this file is skipped there (DI-90).
+
+**Lessons.** A check that walks the focus order should start from a named element. "Tab once from the focused element" quietly depended on how many controls the title had.
+
 ## 14. Revision notes
 
 - 2026-11-05T06:22Z Initial draft. No approved revisions.
@@ -1749,3 +1811,6 @@ Lessons:
   - **Backup.** The plan before this stage is `T08-fs/close/T08-ui-input.before.md`, sha256 prefix `e2469732532f`.
 - 2026-11-08 Reopened and closed by the T00 owner under RECONCILIATION DI-119, for the operator's HC12 and HC13 rulings: FH-37 added, superseding FH-12 and FH-13; `src/ui/ui.css`, `overlays.ts`, `dom.ts` and three rows in `tests/visual/ui.spec.ts`. Device results: HC8, HC9 (Android only), HC11 passed; HC10 not run (no iPhone). Status stays `done`.
 - 2026-11-11T16:00Z Reopened and closed in one operator session: `src/ui/copy.ts` legend rows `DOUBLE-TAP LOCK` for T02's boost lock, one section 11 entry. No test changed. Status stays `done`.
+- 2026-11-11T18:00Z Reopened in an operator session for amendment LH, LAUNCH with or without the HUD: Purpose items 11 and 12, scope, rows A42 to A47 and HC14, decisions LH-1 to LH-7 and E5, Progress. Approved by the operator in session. Status `in-progress`. `owns` and `reads` unchanged.
+- 2026-11-11T18:20Z **Amendment LH executed and closed** in the same operator session. Changed, all inside `owns`: `src/ui/copy.ts`, `dom.ts`, `title.ts`, `menu.ts`, `index.ts`, `ui.css`, `tests/visual/ui.spec.ts`, this plan. E6 added (two fixture edits found by A47). Status `done`, with HC14 open. `owns` and `reads` unchanged. Not committed.
+- 2026-11-11T18:40Z HC14 recorded from the operator's phone report. No other change.

@@ -74,9 +74,10 @@ html[data-mv-mode="play"] canvas { cursor: none; }
   .mv-ui .mv-legend.mv-if-coarse { display: flex; }
 }
 
-/* DI-95: until T10's html[data-mv-boot] reads running, the prompt says LOADING in place of either prompt, and index.ts
-   ignores a launch. A page with no such attribute has no boot to wait for. */
-html[data-mv-boot]:not([data-mv-boot="running"]) .mv-ui .mv-launch > span { display: none; }
+/* DI-95: until T10's html[data-mv-boot] reads running, LAUNCH says LOADING, both start buttons look muted, and index.ts
+   ignores a launch. A page with no such attribute has no boot to wait for. LH-6: LAUNCH - NO HUD keeps its label and
+   stays focusable, so the remembered choice can hold focus while loading. */
+html[data-mv-boot]:not([data-mv-boot="running"]) .mv-ui .mv-launch-hud > .mv-launch-label { display: none; }
 html[data-mv-boot]:not([data-mv-boot="running"]) .mv-ui .mv-launch > .mv-if-loading { display: inline; }
 html[data-mv-boot]:not([data-mv-boot="running"]) .mv-ui .mv-title { cursor: progress; }
 html[data-mv-boot]:not([data-mv-boot="running"]) .mv-ui .mv-launch {
@@ -212,6 +213,21 @@ html[data-mv-boot]:not([data-mv-boot="running"]) .mv-ui .mv-launch {
 .mv-launch > span { transform: skewX(11deg); }
 .mv-title .mv-launch:hover { background: rgba(45, 226, 230, .22); }
 
+/* Amendment LH (LH-7): LAUNCH and LAUNCH - NO HUD side by side, wrapping to two rows on a narrow screen. NO HUD is
+   the secondary choice: smaller type, the same 44 px floor. */
+.mv-launches {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: center;
+  gap: .7em 1.4em;
+  max-width: 100%;
+}
+.mv-launch-nohud {
+  font-size: 1.05em;
+  padding: .55em 1.5em;
+}
+
 .mv-legend {
   display: flex;
   flex-wrap: wrap;
@@ -226,9 +242,9 @@ html[data-mv-boot]:not([data-mv-boot="running"]) .mv-ui .mv-launch {
 }
 .mv-legend b { color: var(--mv-accent); }
 
-/* The prompt stays. Everything else fades, so an idle page serves as a screensaver. */
-.mv-title-bottom > :not(.mv-launch) { transition: opacity 1.6s; }
-.mv-title[data-attract="1"] .mv-title-bottom > :not(.mv-launch) { opacity: 0; }
+/* The start buttons stay. Everything else fades, so an idle page serves as a screensaver. */
+.mv-title-bottom > :not(.mv-launches) { transition: opacity 1.6s; }
+.mv-title[data-attract="1"] .mv-title-bottom > :not(.mv-launches) { opacity: 0; }
 
 /* ---- HUD ---- */
 

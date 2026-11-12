@@ -4,9 +4,10 @@ import type { FatalReason, Tier } from '../contracts/index';
 
 export const TAGLINE = 'THE ROAD NEVER STOPS';
 
-export const PROMPT_KEY = 'PRESS ANY KEY';
-export const PROMPT_TOUCH = 'TAP TO LAUNCH';
-/** Shown in place of either prompt until the game is running (DI-95). */
+/** Amendment LH: the two start buttons. Any key, or a tap off them, still launches with the remembered HUD choice. */
+export const LAUNCH_HUD = 'LAUNCH';
+export const LAUNCH_NO_HUD = 'LAUNCH - NO HUD';
+/** Shown in place of LAUNCH until the game is running (DI-95). */
 export const PROMPT_LOADING = 'LOADING';
 
 /** [control, action] pairs. The touch list replaces the keyboard list on a coarse pointer. */

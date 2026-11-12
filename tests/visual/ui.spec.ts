@@ -594,10 +594,10 @@ test.describe('gesture: boot', () => {
     expect(await callNames(page, 'launch')).toEqual([]);
     await expect(page.locator('html')).toHaveAttribute('data-mv-boot', 'loading');
     await expect(page.getByRole('button', { name: 'LOADING' })).toBeVisible();
-    await expect(page.getByRole('button', { name: 'PRESS ANY KEY' })).toHaveCount(0);
+    await expect(page.getByRole('button', { name: 'LAUNCH', exact: true })).toHaveCount(0);
     await saveShot(page, info, 'title-loading');
     await expect(page.locator('html')).toHaveAttribute('data-mv-boot', 'running', { timeout: 5000 });
-    await expect(page.getByRole('button', { name: 'PRESS ANY KEY' })).toBeVisible();
+    await expect(page.getByRole('button', { name: 'LAUNCH', exact: true })).toBeVisible();
     await page.keyboard.press('a');
     expect((await callNames(page, 'launch')).length).toBe(1);
   });
@@ -606,13 +606,13 @@ test.describe('gesture: boot', () => {
 test.describe('gesture: boot, touch', () => {
   test.use({ viewport: { width: 390, height: 844 }, deviceScaleFactor: 3, hasTouch: true, isMobile: true });
 
-  test('while loading the prompt reads LOADING in place of TAP TO LAUNCH, and a tap launches nothing', async ({ page }, info) => {
+  test('while loading the prompt reads LOADING in place of LAUNCH, and a tap launches nothing', async ({ page }, info) => {
     await page.goto(url({ boot: 'loading' }));
     await page.touchscreen.tap(200, 500);
     await page.waitForTimeout(100);
     expect(await callNames(page, 'launch')).toEqual([]);
     await expect(page.getByRole('button', { name: 'LOADING' })).toBeVisible();
-    await expect(page.getByRole('button', { name: 'TAP TO LAUNCH' })).toHaveCount(0);
+    await expect(page.getByRole('button', { name: 'LAUNCH', exact: true })).toHaveCount(0);
     await saveShot(page, info, 'title-loading-phone');
   });
 });
@@ -689,7 +689,8 @@ test.describe('gesture: cold load', () => {
     expect(after.mode, 'the early press launched nothing').toBe('demo');
     expect(early.filter((l) => l.startsWith('MVB audio')), 'the early press built no AudioContext').toEqual([]);
     expect(press).toContain('prompt=LOADING');
-    expect(after.prompt).toBe('PRESS ANY KEY');
+    // E5 (amendment LH): the start button's label, where the prompt was.
+    expect(after.prompt).toBe('LAUNCH');
 
     await page.keyboard.press('Space');
     await expect(page.locator('html')).toHaveAttribute('data-mv-mode', 'play');
@@ -1230,6 +1231,8 @@ async function warmProblems(page: Page): Promise<string[]> {
   if (w.hitResume.inside !== null) p.push(`a pointer on the hidden Resume hits ${w.hitResume.at} in ${w.hitResume.inside}`);
   if (await page.getByRole('button', { name: 'Open cruise menu' }).count() !== 0) p.push('the hidden menu button is in the accessibility tree');
   if (await page.getByRole('button', { name: 'RESUME' }).count() !== 0) p.push('the hidden Resume is in the accessibility tree');
+  // E6 (amendment LH): Tab from the title's last start button, as it ran from the one launch button before LH.
+  await page.evaluate(() => { document.querySelector<HTMLElement>('[data-mv="launch-nohud"]')!.focus(); });
   await page.keyboard.press('Tab');
   const focused = await page.evaluate(() => document.activeElement?.closest('[data-mv="hud"], [data-mv="cruise"]')?.getAttribute('data-mv') ?? null);
   if (focused !== null) p.push(`Tab reaches the hidden ${focused}`);
@@ -1659,7 +1662,7 @@ test.describe('a11y:', () => {
   test('roles and names', async ({ page }) => {
     await page.goto(url());
     await expect(page.getByRole('heading', { name: 'Midnight Vector' })).toBeVisible();
-    await expect(page.getByRole('button', { name: 'PRESS ANY KEY' })).toBeVisible();
+    await expect(page.getByRole('button', { name: 'LAUNCH', exact: true })).toBeVisible();
     await expect(page.getByRole('dialog')).toHaveCount(0);
 
     await page.goto(url({ state: 'play' }));
@@ -2141,7 +2144,9 @@ test.describe('contrast:', () => {
   test('title text over the scene', async ({ page }) => {
     await page.setViewportSize({ width: 1280, height: 720 });
     await page.goto(url({ state: 'title' }));
-    const rows = await measureContrast(page, ['.mv-tagline', '[data-mv="best"]', '.mv-legend.mv-if-fine', '.mv-launch > .mv-if-fine']);
+    const rows = await measureContrast(page, ['.mv-tagline', '[data-mv="best"]', '.mv-legend.mv-if-fine',
+      // E6 (amendment LH): both start buttons' labels, where the one prompt span was.
+      '.mv-launch-hud > .mv-launch-label', '.mv-launch-nohud > .mv-launch-label']);
     console.log(`contrast title: ${rows.map((r) => `${r.selector} ${r.ratio.toFixed(2)}`).join(', ')}`);
     for (const r of rows) expect(r.ratio, `${r.selector} needs ${r.need}`).toBeGreaterThanOrEqual(r.need);
   });
@@ -4145,3 +4150,151 @@ for (const v of FH_REVIEW) {
     });
   });
 }
+
+// ---- Amendment LH: LAUNCH and LAUNCH - NO HUD on the title (plan section 7, A42 to A46) ----
+
+const SETTINGS_SHOWN = '{"music":0.8,"sfx":0.8,"muted":false,"quality":"auto","reduced":null,"hideHud":false}';
+
+const storedHide = async (page: Page): Promise<unknown> =>
+  ((await stored(page)).settings as { hideHud?: unknown } | null)?.hideHud;
+
+const activeHook = (page: Page): Promise<string | null> =>
+  page.evaluate(() => document.activeElement?.getAttribute('data-mv') ?? null);
+
+interface StartButton { hook: string; x: number; y: number; w: number; h: number }
+
+async function startButtons(page: Page): Promise<StartButton[]> {
+  return page.evaluate(() => Array.from(document.querySelectorAll('.mv-launch'), (b) => {
+    const r = b.getBoundingClientRect();
+    return { hook: b.getAttribute('data-mv') ?? '', x: r.left, y: r.top, w: r.width, h: r.height };
+  }));
+}
+
+function expectStartButtonsFit(rows: StartButton[], vw: number, vh: number): void {
+  expect(rows.map((r) => r.hook)).toEqual(['launch', 'launch-nohud']);
+  for (const r of rows) {
+    expect(r.w, `${r.hook} width`).toBeGreaterThanOrEqual(44);
+    expect(r.h, `${r.hook} height`).toBeGreaterThanOrEqual(44);
+    expect(r.x, `${r.hook} left`).toBeGreaterThanOrEqual(0);
+    expect(r.y, `${r.hook} top`).toBeGreaterThanOrEqual(0);
+    expect(r.x + r.w, `${r.hook} right`).toBeLessThanOrEqual(vw);
+    expect(r.y + r.h, `${r.hook} bottom`).toBeLessThanOrEqual(vh);
+  }
+}
+
+test.describe('launch: hud choice', () => {
+  test('A42: the title has LAUNCH and LAUNCH - NO HUD, each a 44 px target inside the viewport', async ({ page }, info) => {
+    await page.goto(url());
+    await expect(page.getByRole('button', { name: 'LAUNCH', exact: true })).toBeVisible();
+    await expect(page.getByRole('button', { name: 'LAUNCH - NO HUD', exact: true })).toBeVisible();
+    const vp = page.viewportSize()!;
+    expectStartButtonsFit(await startButtons(page), vp.width, vp.height);
+    await saveShot(page, info, 'lh-title');
+  });
+
+  test('A43: LAUNCH - NO HUD launches with the HUD hidden and stored, the CRUISE box ticked, and the box switches it back', async ({ page }) => {
+    await page.goto(url());
+    expect(await activeHook(page), 'defaults focus LAUNCH').toBe('launch');
+    await clickCentre(page, '[data-mv="launch-nohud"]');
+    expect((await callNames(page, 'launch')).length).toBeGreaterThanOrEqual(1);
+    await expect(page.locator('.mv-ui')).toHaveAttribute('data-hide-hud', '1');
+    expect(await storedHide(page), 'stored at the launch').toBe(true);
+    await step(page, 2);
+    await expect(page.locator('html')).toHaveAttribute('data-mv-mode', 'play');
+    expectReadouts(await hudVisibility(page), 'hidden', 'PLAY after LAUNCH - NO HUD');
+
+    await page.keyboard.press('Escape');
+    await step(page, 2);
+    await expect(page.locator('html')).toHaveAttribute('data-mv-mode', 'cruise');
+    await expect(page.locator('[data-mv="hide-hud"]')).toBeChecked();
+    await clickBox(page, 'hide-hud');
+    await expect(page.locator('[data-mv="hide-hud"]')).not.toBeChecked();
+    await expect(page.locator('.mv-ui')).toHaveAttribute('data-hide-hud', '0');
+    await clickCentre(page, '[data-mv="resume"]');
+    await step(page, 2);
+    await expect(page.locator('html')).toHaveAttribute('data-mv-mode', 'play');
+    expectReadouts(await hudVisibility(page), 'visible', 'PLAY after unticking HIDE HUD');
+    expect(await storedHide(page)).toBe(false);
+  });
+
+  test('A44: LAUNCH over a stored hidden HUD launches with the HUD shown, stored, and the box unticked', async ({ page }) => {
+    await seedSettings(page, SETTINGS_HIDDEN);
+    await page.goto(url());
+    await expect(page.locator('.mv-ui')).toHaveAttribute('data-hide-hud', '1');
+    await clickCentre(page, '[data-mv="launch"]');
+    expect((await callNames(page, 'launch')).length).toBeGreaterThanOrEqual(1);
+    await expect(page.locator('.mv-ui')).toHaveAttribute('data-hide-hud', '0');
+    expect(await storedHide(page)).toBe(false);
+    await expect(page.locator('[data-mv="hide-hud"]')).not.toBeChecked();
+    await step(page, 2);
+    await expect(page.locator('html')).toHaveAttribute('data-mv-mode', 'play');
+    expectReadouts(await hudVisibility(page), 'visible', 'PLAY after LAUNCH');
+  });
+
+  test('A45: focus at load follows a stored hidden HUD, and a key launches that choice', async ({ page }) => {
+    await seedSettings(page, SETTINGS_HIDDEN);
+    await page.goto(url());
+    expect(await activeHook(page)).toBe('launch-nohud');
+    await page.keyboard.press('a');
+    expect((await callNames(page, 'launch')).length).toBe(1);
+    await expect(page.locator('.mv-ui')).toHaveAttribute('data-hide-hud', '1');
+    expect(await storedHide(page)).toBe(true);
+  });
+
+  test('A45: with the HUD stored shown, focus is on LAUNCH and a key launches with the HUD', async ({ page }) => {
+    await seedSettings(page, SETTINGS_SHOWN);
+    await page.goto(url());
+    expect(await activeHook(page)).toBe('launch');
+    await page.keyboard.press('a');
+    expect((await callNames(page, 'launch')).length).toBe(1);
+    await expect(page.locator('.mv-ui')).toHaveAttribute('data-hide-hud', '0');
+    expect(await storedHide(page)).toBe(false);
+  });
+
+  test('A46: Tab to LAUNCH - NO HUD, then Enter, launches with the HUD hidden', async ({ page }) => {
+    await page.goto(url());
+    await page.keyboard.press('Tab');
+    expect(await activeHook(page)).toBe('launch-nohud');
+    await page.keyboard.press('Enter');
+    expect((await callNames(page, 'launch')).length).toBeGreaterThanOrEqual(1);
+    await expect(page.locator('.mv-ui')).toHaveAttribute('data-hide-hud', '1');
+    expect(await storedHide(page)).toBe(true);
+  });
+
+  test('control: a key with nothing focused keeps the stored choice and writes nothing, so A45 and A46 read the focus', async ({ page }) => {
+    await page.goto(url());
+    await page.evaluate(() => { (document.activeElement as HTMLElement | null)?.blur(); });
+    await page.keyboard.press('a');
+    expect((await callNames(page, 'launch')).length).toBe(1);
+    await expect(page.locator('.mv-ui')).toHaveAttribute('data-hide-hud', '0');
+    expect(await storedHide(page), 'nothing written when the choice is unchanged').toBeUndefined();
+  });
+});
+
+test.describe('launch: hud choice, touch', () => {
+  test.use({ viewport: { width: 390, height: 844 }, deviceScaleFactor: 3, hasTouch: true, isMobile: true });
+
+  test('A42: on a phone both start buttons are 44 px targets inside the viewport', async ({ page }, info) => {
+    await page.goto(url());
+    expectStartButtonsFit(await startButtons(page), 390, 844);
+    await saveCssShot(page, info, 'lh-title-phone');
+  });
+
+  test('A46: a tap away from the buttons launches and keeps a stored hidden HUD', async ({ page }) => {
+    await seedSettings(page, SETTINGS_HIDDEN);
+    await page.goto(url());
+    const word = await rectOf(page, '[data-mv="wordmark"]');
+    await page.touchscreen.tap(word.x + word.w / 2, word.y + word.h / 2);
+    expect((await callNames(page, 'launch')).length).toBeGreaterThanOrEqual(1);
+    await expect(page.locator('.mv-ui')).toHaveAttribute('data-hide-hud', '1');
+    expect(await storedHide(page)).toBe(true);
+  });
+
+  test('a tap on LAUNCH - NO HUD launches with the HUD hidden', async ({ page }) => {
+    await page.goto(url());
+    const b = await rectOf(page, '[data-mv="launch-nohud"]');
+    await page.touchscreen.tap(b.x + b.w / 2, b.y + b.h / 2);
+    expect((await callNames(page, 'launch')).length).toBeGreaterThanOrEqual(1);
+    await expect(page.locator('.mv-ui')).toHaveAttribute('data-hide-hud', '1');
+  });
+});
