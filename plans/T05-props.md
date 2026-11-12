@@ -6,7 +6,7 @@ owner: T05 executor
 depends_on: [T00]
 owns: [src/render/props/**, dev/props.html, tests/visual/props.spec.ts, tests/unit/props/**, plans/T05-props.md]
 reads: [architecture.md, Agents.md, src/contracts/**, src/core/**, src/testing/**, tests/support/**, plans/T00-foundation.md]
-updated: 2026-11-07T23:35Z
+updated: 2026-11-12T03:40Z
 ---
 
 ## 1. Purpose
@@ -18,6 +18,12 @@ This task is where "full of stuff" lives (R3). After T05, a viewer flying a fake
 3. **It costs what §9 allows.** At worst the layer issues 42 draw calls and about 530k triangles, one `fillProps` per chunk crossing, and zero allocations in its pure hot path.
 4. **It survives everything the app can do to it:** warp, context restore, tier changes with nothing vanishing in one frame (a near tower does collapse in about 36 ms, accepted in DI-42), and rings going idle for any length of time.
 5. **The neon holds up in motion.** Far edges fade to their coverage rather than sparkling, and a filtered far field measures lower shimmer than a naive one.
+
+### Amendment CV, 2026-11-12: chevrons point at the road from either side (operator request, approved in session)
+
+The operator asked: "Another fix is the chevron signs. They all point >>>. Which is the correct direction when the signs are on the left. But when on the right they should point <<<." What a player sees after CV:
+
+6. **A CHEVRON left of the road reads `>>>` and one right of it reads `<<<`**, so both point at the road. Its chase lights still run the way the road bends, the same way across the screen on both sides (the operator's choice in session, "keep bend chase").
 
 ## 2. Context and orientation
 
@@ -395,7 +401,7 @@ Sizes below are `top / root` at scale 1 and match `ARCHETYPE_SPEC` (§8.1). T01'
 |---|---|---|---|---|---|
 | 0 | PALM | 14 / 1.5 | A thin bowed trunk with an exploded crown of 9 fronds arching over and drooping below the crown base. Reads as a palm at 18 px | `tube` along a bowed path, 5-gon, 5 segments, 50 tris. 9 `blade`s: V-folded, 6 segments, tapering to a point, 24 tris each | Near-black body, frond outline and midrib in neon, trunk ring lines. Sway: crown vertices displaced by `sin(TAU * (phaseAt(2) * k + seed))`, scaled by distance along the frond |
 | 7 | REFLECTOR | 1 / .3 | A stick with a bright tip, in lines that sell speed | 4-sided stick, 8 tris. Tip, 4 tris | Tip at L 2.4 with a blink wave: `fract(worldMod / 256 - phaseAt(0))`, where `worldMod = mod(aInstA.w, 64.) * 64. + aInstA.z`, period dividing 4096. Dims by coverage |
-| 19 | CHEVRON | 5 / 1 | A low post carrying three cut arrow shapes, `>>>`. The cut is in the geometry, not on a flat sign | 3 chevrons, 4 tris each, plus post, 16 tris | Lights run along the arrows by phase. Direction and intensity from `uBend.x`, so they light when the road bends. Sells the bend |
+| 19 | CHEVRON | 5 / 1 | A low post carrying three cut arrow shapes, `>>>`; right of the road the vertex shader mirrors it to `<<<` (amendment CV). The cut is in the geometry, not on a flat sign | 3 chevrons, 4 tris each, plus post, 16 tris | Lights run along the arrows by phase. Direction and intensity from `uBend.x`, so they light when the road bends. Sells the bend |
 | 18 | CACTUS | 8 / 1.5 | A saguaro: trunk with two L-shaped arms raised, one higher | 6-gon `tube` trunk and two elbowed arms, 90 tris | Edge-only: vertical rib lines, no body fill beyond near-black |
 | 5 | BILLBOARD | 12 / 4 | A wide sign on two legs, tilted back, with a walkway lip | 2 legs, 8 tris each. Face front and back plus rim, 8 tris | Blocky glyph rows from hashed cells of `aUv`, changing slowly by an integer harmonic of phase 5. Falls back to mean coverage at range |
 | 11 | TOTEM | 9 / 1.5 | A Memphis stack: cube, cone, ball, visibly off-axis, each a different palette colour | Tilted cube 12, cone 16, `uvSphere` 92 | Zigzag bands from `fract(aUv)`, filtered. This is the one archetype with bright body colours, still at most L .2 |
@@ -556,6 +562,18 @@ Paste short output into Progress as each passes. Thresholds are [A] unless a num
 
 - HC1: the props on any GPU other than the RTX and SwiftShader.
 - HC2: whether it is beautiful in motion to someone other than the executor (§14 risks 2 and 4).
+
+### Amendment CV, validation and acceptance
+
+Rows in `tests/visual/props.spec.ts`, describe `chevron: side`, on `gpu`, port 5108, `dev/props.html?scene=one&ship=0&post=off&tier=3`: one CHEVRON alone, 40 u ahead at x -18 or 18, with the facing yaw T01 gives that side (0.35 rad inward). Fail-before is the rows against `HEAD`'s `src/render/props/glsl`.
+
+| # | Command or action | Expected |
+|---|---|---|
+| A38 | Screen x of the sign's lit pixels (frame minus the empty frame) in the band of the arrows' upper halves nearer the tip row, minus that nearer the top | Left sign above +2 px (`>>>`), right sign below -2 px (`<<<`); each band at least 20 lit pixels. Fail-before: right +11.0 px |
+| A39 | At bend `a` +3e-5 and -3e-5, 48 ticks: the three arrows' light, binned by local x at -0.8 and 0.8, as a circular mean; its unwrapped travel summed | Left travel at least 1 rad; right travel the same sign as left, and the sign reverses with the bend. A guard (passes on `HEAD`, where both sides are the same mesh); its control is the mirror without the `props.frag.glsl` change, which fails |
+| A40 | `check:task -- T05`, then the whole `props.spec.ts` on `gpu` | Exit 0; every existing row passes unchanged |
+
+**Human check HC3.** In the game over the tailnet: on Boulevard and Crystal Desert, chevrons left of the road read `>>>` and right of it `<<<`. Not verified by an agent.
 
 ## 8. Idempotence and recovery
 
@@ -774,6 +792,19 @@ Remaining at the end of R3, kept as the record; R4 closed (1) and (2) below. Rem
 - [x] 2026-11-07T22:25Z **`props.spec` on `gpu`.** First run, 21:31Z, with T01's radius-6 gates: 39 passed, 1 failed, 3 skipped; the failure A16b, props' share excess .222 (limit .2), blurred .281, control .556 and .908. Bisected (T01's Progress, 22:20Z): the world's change, not the ship. After T01's radius 8: **40 passed, 3 skipped (3.2 min)**, A16b excess .184, blurred .263, control .511 and .914; log scratchpad `OP1/props-spec-2.log`, output `test-results/T05-OP1`. One process slip: a comment-only edit to `props.vert.glsl` (DI-116's "bit for bit" note) was made while the first run's server was up; the green run is after it, on the final files.
 - [x] 2026-11-07T23:35Z **Closed under DI-118, status `done`.** `check:task T05` PASS. `props.spec` green (22:25Z). Whole repo `npm run check` exit 0 (119 files, 1980 passed, 2 skipped; glsl 189 files, 0 hits), `plans:check` 0 problems, `contracts:check` PASS; T10's e2e on `gpu` (all 19 spec files but `dist.spec`, the two timing specs and the no-webgl one; `TERRAIN_PORT=5110`, through the lock): 62 passed, 9 skipped, exit 0. Open for the operator: DI-118's named choices (the ledger).
 
+### Amendment CV, chevrons point at the road from either side (operator request)
+
+All CV work below was done between commit `0d559b9` (2026-11-12T03:25Z) and the stamp, which is a clock read.
+
+- [x] 2026-11-12T03:34Z Cause: `buildChevron` builds one mesh with its arrows toward +x, and T01's facing yaw turns each side only 0.2 to 0.5 rad toward the road, so both sides show `>>>`. CHEVRON is not in `ARCH_MIRROR` (`plan.ts`), so it has no floor reflection, and its normal family is `DoubleSide` (`material.ts`). A mirror in the vertex shader therefore needs no change to geometry or culling. Approved by the operator in session ("Yes, keep bend chase"). Plan backup: session scratchpad `WM/T05-props.before-CV.md`.
+- [x] 2026-11-12T03:34Z CV code. `props.vert.glsl`: `if (uLook == L_CHEVRON && aInstA.x > 0.) l.x = -l.x;` before yaw, and `vJ.z` = -1 for a mirrored chevron (a prop's `aInstC.z` is 0 and unused). `props.frag.glsl`: the chase sign is multiplied by that -1, so the lights' world direction is unchanged. First placed inside DI-115's tested stretch (`float gateK = 1.;` to `if (uLook == L_RING`), where `gateOpen.test.ts` failed 17 rows because its translator does not know `uLook`; moved just before that stretch, which a chevron never enters. `npm run check:task -- T05`: tsc 0 problems, eslint 0 errors 0 warnings, vitest 13 files exit 0, glsl 0 hits, PASS.
+- [x] 2026-11-12T03:34Z A38 and A39, `-g "chevron: side"`: **2 passed.** A38: left dx 10.6 px (708 lit), right dx -10.6 px (708 lit). A39: bend +3e-5, left -7.95, right -7.91 rad; bend -3e-5, left 7.91, right 8.03 rad.
+- [x] 2026-11-12T03:34Z **Fail-before** against `HEAD`'s shaders: A38 **failed**, right dx +11.0 px. A39 passed (left -7.95, right -9.28; left 7.91, right 7.92), as a guard. **A39's control**, the vertex change without the fragment change: **failed** (`Expected: -1`, `Received: 1`).
+- [x] 2026-11-12T03:34Z **Viewed** `cv-chevron-left.png` and `cv-chevron-right.png`: `>>>` and `<<<`, post centred, arrows cut, unlit chase at bend 0.
+- [x] 2026-11-12T03:34Z A40, whole `props.spec.ts` on `gpu`, port 5108: **42 passed, 3 skipped (3.2 m)**, exit 0. No existing row edited.
+- [x] 2026-11-12T03:40Z **HC3 passed** on the operator's report: "The chevron change works."
+- [x] 2026-11-12T03:46Z Whole-repo `npm run check` before the commit: first run **failed** on tsc, `props.spec.ts` A39's `b[j] +=` under `noUncheckedIndexedAccess` (the A39 row was added after the `check:task` run above, so that gate never saw it). Fixed to `b[j] = b[j]! + ...`; rerun **exit 0**, vitest 119 files, 1990 passed, 2 skipped, glsl 0 hits; `-g "chevron: side"` 2 passed again.
+
 ## 10. Surprises and discoveries
 
 From building it, on the real project:
@@ -824,6 +855,8 @@ From the 2026-11-05 spike and arithmetic in `scratchpad/t05_spike/`, on simple p
 - **Roster arithmetic:** `Cap` matched in all rows except RING, which is deliberately special; totals reproduce §6.5 exactly (317,284 scenery, 12,492 items, 195,960 mirror).
 - **(R5) A warm-up pass does not protect A30 from a sibling's GPU suite.** Without the lock, run 5 read 2.20 with T09's gpu-timing suite running, and its no-props baseline rose from 1.00 to 1.10 to 1.40. The old lower-of-two figure failed it too, at 2.10. So DI-86(3) removes the first pass's noise, which reached 4.30 once even through the lock, but not contention. That is why `test:browser` has to run with the GPU otherwise idle (DI-70 (3)).
 - **(R5) The no-flush mutant sits on A30's limit, so the gate fails it by a thin majority.** Its gated figure read 2.00, 2.30, 2.50, 2.00 and 2.20 through the lock, and R4's logs read under the same definition give 1.80 to 2.40. That is 7 failures in 12 runs, while the real layer reads 1.30 to 1.90. Every A30 figure in R4 and R5 is a multiple of 0.1 ms [O: printed to two places, and the second place is always 0]. A p95 of exactly 2.00 therefore passes, and the next step up fails. That happened to two of the five mutant runs. Why the timer has this resolution was not checked; Chromium coarsening `performance.now` is from memory [M]. A paired comparison separates the two cleanly (mutant above real in 11 of 11 pairs), but a regression of the flush's size reaches the absolute limit only about half the time.
+
+- **(CV) A shader that reads its own source for a proof also fixes where new code may go.** `gateOpen.test.ts` translates the stretch from `float gateK = 1.;` to `if (uLook == L_RING` into JS and runs it; a line there naming anything outside its vocabulary fails every row in that file.
 
 ## 11. Decision log
 
@@ -908,6 +941,8 @@ From the 2026-11-05 spike and arithmetic in `scratchpad/t05_spike/`, on simple p
 | **DI-118: the ship's hull is turned outward and closed, not drawn double-sided** | One-sided drawing of a closed, outward mesh shows each face once and keeps depth order right; `DoubleSide` would have hidden the cause and drawn the inside of the hull where the old slots were. The faces are turned by index order, so every vertex attribute, and so every line and uv, stays as T11 tuned it | 2026-11-07 | T00 owner, for the operator |
 | **DI-118: the underside and walls carry outline lines** | With the hull outward the camera sees the true underside whenever the ship flies above y 7.5, and the new lane keeps it at 8 to 13. Before, the inside-out top faces drew the outline there. Lining the underside's outline keeps the delta reading as T11's white outline from below | 2026-11-07 | T00 owner, for the operator |
 | **DI-118: the gate has no legs** | The operator's one fix at Q3. DI-113 and DI-115's leg rule goes with them; the ring's opening rule is unchanged | 2026-11-07 | T00 owner, for the operator |
+| **CV-1: a CHEVRON right of the road (`aInstA.x > 0`) is mirrored in x in the vertex shader, before yaw** | The operator's request: arrows point at the road from both sides. A mirror needs no new mesh, archetype or contract change; CHEVRON has no mirror ring and draws `DoubleSide`, so the reversed winding is drawn. The x sign is the lateral offset T01 writes, the same sign that chooses its facing yaw | 2026-11-12 | T05 executor, for the operator |
+| **CV-2: the chase lights keep their world direction** | The operator's choice ("keep bend chase"). The lights are phased by arrow index, which the mirror reverses across the world, so the fragment multiplies the bend's sign by `vJ.z` (-1 when mirrored). On a bend both sides run the same way across the screen, so one of them runs against its own arrows | 2026-11-12 | T05 executor, for the operator |
 
 ## 12. Contract change requests
 
@@ -959,6 +994,14 @@ Fallback if rejected: T02 and T05 each keep a local constant of 14, as T02's pla
 
 **Open human checks:** HC1, HC2.
 
+### Amendment CV
+
+**Result against Purpose item 6: met on the evidence available.** A38 reads `>>>` left and `<<<` right and fails on the old shaders; A39 shows the chase direction unchanged on both sides and fails when the fragment change is left out; the crops were viewed.
+
+**HC3 passed** on the operator's report in the running game.
+
+**Not verified:** T11's art suites, whose frames contain chevrons in Boulevard and Crystal Desert, were not run; their reference images, where they exist, would differ wherever a chevron stands right of the road. Whole-repo `npm run check` exit 0 before the commit (section 9).
+
 ## 14. Revision notes
 
 - 2026-11-05T06:30Z Initial draft. No approved revisions, no absorbed requests.
@@ -980,3 +1023,5 @@ Fallback if rejected: T02 and T05 each keep a local constant of 14, as T02's pla
 - 2026-11-06T04:47Z R5 by the T05 executor, after the T00 owner's ruling DI-86(3), status `done`. A30 now runs one discarded warm-up pass of the same sequence and gates the p95 of the pass after it, at the unchanged 2.0 ms limit. This replaces V1's lower p95 of two runs, by my reading of "the gated pass" as one pass, recorded for the T00 owner to check. The no-flush mutant fails it first (3 of 5 through the lock) and the real layer passes (5 of 5 through the lock, 4 of 5 without it, the fifth beside T09's suite). Sections 7 (A30), 9, 10, 11 and 13 updated. Only `props.spec.ts` and this plan changed. No threshold moved.
 - 2026-11-07T21:30Z Reopened by the T00 owner for T11's operator review (DI-118), status `in-progress`: the ship's hull turned outward and closed, its underside outlined, the gate's legs removed, with a new ship test and its negative control; the GPU suite and close to follow.
 - 2026-11-07T23:35Z DI-118 closed, status `done`.
+- 2026-11-12T03:34Z **Amendment CV** opened, approved, executed and closed in an operator session: Purpose item 6, the CHEVRON roster row, rows A38 to A40 and HC3, CV-1 and CV-2, Progress, Surprises, Outcomes. Changed, inside `owns`: `src/render/props/glsl/props.vert.glsl`, `props.frag.glsl`, `tests/visual/props.spec.ts`, this plan. Status `done`, with HC3 open. `owns` and `reads` unchanged. Not committed.
+- 2026-11-12T03:40Z HC3 recorded as passed from the operator's report. No other change.

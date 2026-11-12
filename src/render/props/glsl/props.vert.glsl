@@ -147,6 +147,10 @@ void main() {
   // camera less SHIP_HALF_LENGTH, 11.8 u by default), the ring opens out about the camera's line of travel by gateK, 1 to 7. Each
   // member is first thinned across its band by 1 / gateK, so it leaves the frame at the width it had and is never magnified: DI-110
   // scaled whole members, and one the camera passed close to became a wall over 40 to 90% of the frame (T11 final3, frame 2190).
+  // Amendment CV: the mesh points +x, >>>. Right of the road it is drawn mirrored, <<<, so from both sides the arrows point at the
+  // road. CHEVRON has no mirror ring and its normal family is DoubleSide, so the reversed winding culls nothing. It sits before
+  // DI-115's tested stretch below, which a chevron never enters.
+  if (uLook == L_CHEVRON && aInstA.x > 0.) l.x = -l.x;
   // DI-115: each step is written to be exactly the identity while gateK is 1 (gateU 0), so a gate the ship has not reached takes
   // the same arithmetic as before DI-110. On this GPU the stills still differ from final2's by up to 9.4e-5 (W3), cause not
   // traced (DI-116), so this holds for the arithmetic, not for every pixel.
@@ -203,6 +207,7 @@ void main() {
   vI = vec4(seed, variant, aInstB.y, mod(aInstA.w, 64.) * 64. + aInstA.z);
   vJ = aInstC;
   if (uLook == L_REFLECTOR) vJ.z = thin;                  // a prop's aInstC.z is 0 and unused
+  if (uLook == L_CHEVRON) vJ.z = aInstA.x > 0. ? -1. : 1.;   // amendment CV: -1 where the arrows are mirrored
   if (uMotion == M_GATE) {
     vJ.x = abs(aInstA.w - uGateFlash.x) < .5 ? uGateFlash.y : 0.;
   }

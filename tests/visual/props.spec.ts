@@ -2001,3 +2001,144 @@ test.describe('software', () => {
     expect(r.d3.bytes, 'tier 0: an orb under hero 3 reflects the plain sun').toBe(0);
   });
 });
+
+// ---- Amendment CV: a chevron points at the road from either side (plan section 7, A38 and A39) ----
+
+test.describe('chevron: side', () => {
+  /**
+   * One CHEVRON, alone, at x and 40 u ahead, with the facing yaw T01 gives that side. Its arrows' upper halves run from the top
+   * edge down to the tip row at y 3.45: a >>> arrow's lit pixels move right as the rows near the tip row, a <<< arrow's move left.
+   * Returned: screen x of the lit pixels in the band nearer the tip row, minus that in the band nearer the top, in pixels.
+   */
+  async function lean(page: Page, x: number): Promise<{ dx: number; lit: number; png: string }> {
+    return page.evaluate((x) => {
+      const P = window.__props!;
+      const shell = P.shell;
+      const at = { chunk: 1000, local: 0 };
+      const z = 40;
+      const frame = (): void => { shell.frameAt(0, { at, tick: 1000, bend: { a: 0, c: 0 }, palette: 0 }); };
+      const grab = (): Uint8ClampedArray => {
+        const r = shell.ctx.renderer.domElement;
+        const c = document.createElement('canvas');
+        c.width = r.width; c.height = r.height;
+        const g = c.getContext('2d', { willReadFrequently: true })!;
+        g.drawImage(r, 0, 0);
+        return g.getImageData(0, 0, c.width, c.height).data;
+      };
+      P.sheetWorld!.select(null);
+      frame(); shell.rebuild(); frame();
+      const empty = grab();
+      const place = { at, distance: z, x, y: 0, yaw: -Math.sign(x) * 0.35, scale: 1, keep: 0.6, tintSeed: 0.1, variant: 0.5 };
+      P.sheetWorld!.select({ source: 'prop', kind: 19, place });
+      frame(); shell.rebuild(); frame();
+      const full = grab();
+      const r = shell.ctx.renderer.domElement;
+      const W = r.width, H = r.height;
+      const [l] = P.project(x - 4, 3.45, -z);
+      const [rt] = P.project(x + 4, 3.45, -z);
+      const row = (y: number): number => P.project(x, y, -z)[1];
+      const band = (y0: number, y1: number): { mean: number; n: number } => {
+        let sx = 0, n = 0;
+        const top = Math.round(Math.min(row(y0), row(y1))), bot = Math.round(Math.max(row(y0), row(y1)));
+        for (let py = Math.max(0, top); py <= Math.min(H - 1, bot); py++) {
+          for (let px = Math.max(0, Math.round(l)); px <= Math.min(W - 1, Math.round(rt)); px++) {
+            const i = (py * W + px) * 4;
+            const d = Math.abs(full[i]! - empty[i]!) + Math.abs(full[i + 1]! - empty[i + 1]!) + Math.abs(full[i + 2]! - empty[i + 2]!);
+            if (d > 60) { sx += px; n++; }
+          }
+        }
+        return { mean: n > 0 ? sx / n : NaN, n };
+      };
+      const h = 1.5;
+      const nearTip = band(3.45 + 0.1 * h, 3.45 + 0.45 * h);
+      const nearTop = band(3.45 + 0.6 * h, 3.45 + 0.95 * h);
+      const out = document.createElement('canvas');
+      const cw = Math.round(rt - l) + 40, ch = Math.round(row(0) - row(5.2)) + 40;
+      out.width = cw; out.height = ch;
+      out.getContext('2d')!.drawImage(r, Math.round(l) - 20, Math.round(row(5.2)) - 20, cw, ch, 0, 0, cw, ch);
+      return { dx: nearTip.mean - nearTop.mean, lit: Math.min(nearTip.n, nearTop.n), png: out.toDataURL('image/png') };
+    }, x);
+  }
+
+  test('A38: left of the road the arrows point right, >>>, and right of it they point left, <<<, both at the road', async ({ page }, info) => {
+    await open(page, { scene: 'one', ship: 0, post: 'off', tier: 3 });
+    const left = await lean(page, -18);
+    const right = await lean(page, 18);
+    savePng(info, 'cv-chevron-left.png', left.png);
+    savePng(info, 'cv-chevron-right.png', right.png);
+    console.log(`A38 lean: left dx ${left.dx.toFixed(1)} px (${left.lit} lit), right dx ${right.dx.toFixed(1)} px (${right.lit} lit)`);
+    expect(left.lit, 'left sign drawn').toBeGreaterThan(20);
+    expect(right.lit, 'right sign drawn').toBeGreaterThan(20);
+    expect(left.dx, 'left: >>>').toBeGreaterThan(2);
+    expect(right.dx, 'right: <<<').toBeLessThan(-2);
+  });
+
+  /**
+   * The lit arrow's travel across the screen as ticks pass, at one bend sign: + right, - left. The sign's three arrows, binned by
+   * local x at -0.8 and 0.8 (between arrows whether the mesh is mirrored or not), weight a circular mean whose angle is unwrapped tick
+   * to tick; the summed change gives the direction.
+   */
+  async function chase(page: Page, x: number, a: number): Promise<{ travel: number; steps: number[] }> {
+    return page.evaluate(([x, a]) => {
+      const P = window.__props!;
+      const shell = P.shell;
+      const at = { chunk: 1000, local: 0 };
+      const z = 40, yaw = -Math.sign(x) * 0.35;
+      const frame = (tick: number): void => { shell.frameAt(0, { at, tick, bend: { a, c: 0 }, palette: 0 }); };
+      const grab = (): Uint8ClampedArray => {
+        const r = shell.ctx.renderer.domElement;
+        const c = document.createElement('canvas');
+        c.width = r.width; c.height = r.height;
+        const g = c.getContext('2d', { willReadFrequently: true })!;
+        g.drawImage(r, 0, 0);
+        return g.getImageData(0, 0, c.width, c.height).data;
+      };
+      const sx = (bx: number): number => P.project(x + bx * Math.cos(yaw), 3.45, -z - bx * Math.sin(yaw))[0];
+      const xs = [sx(-2.6), sx(-0.8), sx(0.8), sx(2.6)].sort((u, v) => u - v);
+      const top = Math.round(P.project(x, 3.45 + 0.45 * 1.5, -z)[1]), bot = Math.round(P.project(x, 3.45 - 0.45 * 1.5, -z)[1]);
+      P.sheetWorld!.select(null);
+      frame(1000); shell.rebuild(); frame(1000);
+      const empty = grab();
+      P.sheetWorld!.select({ source: 'prop', kind: 19, place: { at, distance: z, x, y: 0, yaw, scale: 1, keep: 0.6, tintSeed: 0.1, variant: 0.5 } });
+      frame(1000); shell.rebuild();
+      const W = shell.ctx.renderer.domElement.width;
+      const angles: number[] = [];
+      for (let t = 0; t < 48; t++) {
+        frame(1000 + t);
+        const d = grab();
+        const b = [0, 0, 0];
+        for (let py = top; py <= bot; py++) {
+          for (let px = Math.round(xs[0]!); px <= Math.round(xs[3]!); px++) {
+            const j = px < xs[1]! ? 0 : px < xs[2]! ? 1 : 2;
+            const i = (py * W + px) * 4;
+            b[j] = b[j]! + Math.max(0, d[i]! - empty[i]!) + Math.max(0, d[i + 1]! - empty[i + 1]!) + Math.max(0, d[i + 2]! - empty[i + 2]!);
+          }
+        }
+        let cs = 0, sn = 0;
+        for (let j = 0; j < 3; j++) { cs += b[j]! * Math.cos((2 * Math.PI * j) / 3); sn += b[j]! * Math.sin((2 * Math.PI * j) / 3); }
+        angles.push(Math.atan2(sn, cs));
+      }
+      const steps: number[] = [];
+      for (let k = 1; k < angles.length; k++) {
+        let s = angles[k]! - angles[k - 1]!;
+        while (s > Math.PI) s -= 2 * Math.PI;
+        while (s <= -Math.PI) s += 2 * Math.PI;
+        steps.push(s);
+      }
+      return { travel: steps.reduce((u, v) => u + v, 0), steps };
+    }, [x, a] as const);
+  }
+
+  test('A39: the chase lights run the same way across the screen on both sides, and reverse with the bend', async ({ page }) => {
+    await open(page, { scene: 'one', ship: 0, post: 'off', tier: 3 });
+    const rows: string[] = [];
+    for (const a of [3e-5, -3e-5]) {
+      const l = await chase(page, -18, a);
+      const r = await chase(page, 18, a);
+      rows.push(`bend ${a}: left ${l.travel.toFixed(2)}, right ${r.travel.toFixed(2)} rad; left steps ${l.steps.slice(0, 8).map((v) => v.toFixed(2)).join(' ')}`);
+      expect(Math.abs(l.travel), `left moves at bend ${a}`).toBeGreaterThan(1);
+      expect(Math.sign(r.travel), `right runs as left does at bend ${a}`).toBe(Math.sign(l.travel));
+    }
+    console.log(`A39 chase: ${rows.join(' | ')}`);
+  });
+});

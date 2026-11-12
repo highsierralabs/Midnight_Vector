@@ -99,7 +99,9 @@ void main() {
   } else if (uLook == L_CHEVRON) {
     if (vPart > .5) {
       float i = vPart - 1.;
-      float sgn = uBend.x >= 0. ? 1. : -1.;
+      // Amendment CV: a mirrored sign (vJ.z -1) lists its arrows the other way across the world, so the sign flips with it and the
+      // lights still run the way the road bends, on both sides.
+      float sgn = (uBend.x >= 0. ? 1. : -1.) * (vJ.z < 0. ? -1. : 1.);
       float ph = fract((slow > .5 ? phaseAt(1) : phaseAt(0) * 2.) - sgn * i / 3.);
       float lit = smoothstep(0., .18, ph) * (1. - smoothstep(.4, .75, ph));
       float k = smoothstep(0., 4e-5, abs(uBend.x));
