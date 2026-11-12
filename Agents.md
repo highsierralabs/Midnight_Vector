@@ -342,7 +342,7 @@ A check establishes only what it tested: `tsc` proves types, not behaviour; a pa
 
 ## Git
 
-This folder is a git repository since 2026-11-11: branch `main`, remote `origin` at `https://github.com/highsierralabs/Midnight_Vector` (private). Commits use the repo-local identity, the operator's GitHub noreply address; do not change it. Commit and push only when the operator asks, and never force-push. `.gitignore` keeps out `node_modules/`, `dist/`, `test-results/` and `test-refs/` (per-machine references). `.gitattributes` pins text files to LF on checkout, overriding this machine's global `core.autocrlf=true`; do not remove it. Never add AI attribution, such as `Co-Authored-By` trailers or "Generated with" lines, to commit messages or PR bodies.
+This folder is a git repository since 2026-11-11: branch `main`, remote `origin` at `https://github.com/highsierralabs/Midnight_Vector`. A push to `main` runs `.github/workflows/pages.yml`, which builds `dist/` and, once the repository is public, deploys it to GitHub Pages at `https://highsierralabs.github.io/Midnight_Vector/`, so a push publishes the game (T12). Commits use the repo-local identity, the operator's GitHub noreply address; do not change it. Commit and push only when the operator asks, and never force-push. `.gitignore` keeps out `node_modules/`, `dist/`, `test-results/` and `test-refs/` (per-machine references). `.gitattributes` pins text files to LF on checkout, overriding this machine's global `core.autocrlf=true`; do not remove it. Never add AI attribution, such as `Co-Authored-By` trailers or "Generated with" lines, to commit messages or PR bodies.
 
 ## Sources
 

@@ -2,6 +2,13 @@
   "name": "midnight-vector",
   "version": "0.0.0",
   "private": true,
+  "description": "An endless 80s synthwave arcade game that runs in your browser.",
+  "license": "MIT",
+  "homepage": "https://highsierralabs.github.io/Midnight_Vector/",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/highsierralabs/Midnight_Vector.git"
+  },
   "type": "module",
   "engines": {
     "node": ">=24.14.1 <25"
