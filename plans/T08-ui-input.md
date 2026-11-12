@@ -6,7 +6,7 @@ owner: T08 executor
 depends_on: [T00]
 owns: [src/ui/**, src/input/**, dev/ui.html, tests/unit/input/**, tests/unit/ui/**, tests/visual/ui.spec.ts, plans/T08-ui-input.md]
 reads: [architecture.md, Agents.md, src/contracts/**, src/core/**, src/testing/**, tests/support/**, plans/T00-foundation.md]
-updated: 2026-11-12T03:50Z
+updated: 2026-11-12T03:32Z
 ---
 
 ## 1. Purpose
@@ -1209,8 +1209,8 @@ Reopened by the T00 owner for the operator's request (section 14). Planning only
 - [x] 2026-11-12T03:20Z WM code, `src/ui/ui.css`: `color-scheme: dark` on `.mv-ui, .mv-fatal`. Tests A51, A52 (new describe `wordmark: forced dark`). `check:task -- T08`: one tsc problem on the first try (`baseURL` under `exactOptionalPropertyTypes`), fixed with `baseURL!`, then PASS. Rows `-g "wordmark: "`: **4 passed**; A52 logged light share 0.669, control 0.021.
 - [x] 2026-11-12T03:22Z **Fail-before** against `HEAD`'s `ui.css`: A51 **failed** (`Received: "normal"`), A52 **failed** (share 0.000, control 0.000).
 - [x] 2026-11-12T03:25Z **Viewed** forced dark with a dark preference on the rebuilt production bundle at 412x915: title (chrome light, buttons and legend as designed), PLAY HUD and the CRUISE card (panels, sliders, radios, boxes as designed).
-- [x] 2026-11-12T03:35Z A50 again, whole `ui.spec.ts` on `gpu`, port 5108, with A51 and A52: **303 passed (3.4 m)**, exit 0. The rebuilt bundle is served on 5173 for HC15.
-- [x] 2026-11-12T03:50Z **HC15 passed** on the operator's phone, reported with a screenshot: "The chrome lettering is back and working on both light and dark modes on my phone." The screenshot shows the light chrome and no lines inside the letters.
+- [x] 2026-11-12T03:25Z A50 again, whole `ui.spec.ts` on `gpu`, port 5108, with A51 and A52: **303 passed (3.4 m)**, exit 0. The rebuilt bundle is served on 5173 for HC15.
+- [x] 2026-11-12T03:25Z **HC15 passed** on the operator's phone, reported with a screenshot: "The chrome lettering is back and working on both light and dark modes on my phone." The screenshot shows the light chrome and no lines inside the letters.
 ## 10. Surprises and discoveries
 
 All from 2026-11-05 scratchpad rehearsals on Chromium 1234. None has run against project code.
@@ -1870,5 +1870,6 @@ Lessons:
 - 2026-11-11T18:20Z **Amendment LH executed and closed** in the same operator session. Changed, all inside `owns`: `src/ui/copy.ts`, `dom.ts`, `title.ts`, `menu.ts`, `index.ts`, `ui.css`, `tests/visual/ui.spec.ts`, this plan. E6 added (two fixture edits found by A47). Status `done`, with HC14 open. `owns` and `reads` unchanged. Not committed.
 - 2026-11-11T18:40Z HC14 recorded from the operator's phone report. No other change.
 - 2026-11-12T03:10Z **Amendment WM** opened, approved, executed and closed in one operator session: Purpose item 13, the section 5 wordmark spec, rows A48 to A50 and HC15, decisions WM-1 and WM-2, Progress, Surprises, Outcomes. Changed, inside `owns`: `src/ui/ui.css`, `tests/visual/ui.spec.ts`, this plan. Status `done`, with HC15 open. `owns` and `reads` unchanged. Not committed.
-- 2026-11-12T03:40Z Amendment WM extended in the same session for the operator's second report: Purpose item 14, rows A51 and A52, HC15 widened, WM-3, Progress, Surprises, Outcomes. Changed, inside `owns`: `src/ui/ui.css`, `tests/visual/ui.spec.ts`, this plan. Status `done`, with HC15 open. Not committed.
-- 2026-11-12T03:50Z HC15 recorded as passed from the operator's phone report, light and dark modes. No other change.
+- 2026-11-12T03:25Z Amendment WM extended in the same session for the operator's second report: Purpose item 14, rows A51 and A52, HC15 widened, WM-3, Progress, Surprises, Outcomes. Changed, inside `owns`: `src/ui/ui.css`, `tests/visual/ui.spec.ts`, this plan. Status `done`, with HC15 open. Not committed.
+- 2026-11-12T03:25Z HC15 recorded as passed from the operator's phone report, light and dark modes. No other change.
+- 2026-11-12T03:32Z Timestamp correction. Amendment WM's stamps from 02:55Z on were estimated when written, not read from a clock. Three of them (03:35Z, 03:40Z, 03:50Z) fell after commit `0d559b9` at 03:25:28Z, which contains the work they record; they now read 03:25Z, the commit's time, as an upper bound. The other WM stamps are approximate, within 02:52Z (a clock read) and 03:25Z. No other change.
