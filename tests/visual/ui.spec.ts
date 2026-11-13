@@ -46,6 +46,12 @@ async function rectOf(page: Page, selector: string): Promise<{ x: number; y: num
 
 const nodeWait = (ms: number): Promise<void> => new Promise((done) => { setTimeout(done, ms); });
 
+/**
+ * Amendment LS: a phone held upright shows the rotate gate and plays nothing, so the phone of every behaviour row below is
+ * held sideways. The gate's own rows are under 'rotate:'.
+ */
+const PHONE = { viewport: { width: 844, height: 390 }, deviceScaleFactor: 3, hasTouch: true, isMobile: true } as const;
+
 // ---- A27, DI-90: test:software runs tests/visual under the software project, at 640x360 on SwiftShader. Every row in
 // this file is a DOM row on a three-free page, or the app at the gpu project's 1920x1080, so none is meant for software:
 // the input chord, the gesture click and the firstshow panels assume the gpu viewport and fail there. Each row is
@@ -247,7 +253,7 @@ test.describe('input: touch', () => {
 });
 
 test.describe('input: boost button', () => {
-  test.use({ viewport: { width: 390, height: 844 }, deviceScaleFactor: 3, hasTouch: true, isMobile: true });
+  test.use(PHONE);
 
   test('pressing [data-mv-boost] in the real UI sets boost and clears on release, and is not a steer finger', async ({ page, context }) => {
     await page.goto(url({ state: 'play' }));
@@ -403,7 +409,7 @@ test.describe('input: mouse corner', () => {
 });
 
 test.describe('input: mouse corner, touch', () => {
-  test.use({ viewport: { width: 390, height: 844 }, deviceScaleFactor: 3, hasTouch: true, isMobile: true });
+  test.use(PHONE);
 
   test('on a touch screen II still takes the tap in PLAY', async ({ page }) => {
     await page.goto(url({ state: 'play' }));
@@ -524,11 +530,11 @@ test.describe('gesture:', () => {
 });
 
 test.describe('gesture: touch', () => {
-  test.use({ viewport: { width: 390, height: 844 }, deviceScaleFactor: 3, hasTouch: true, isMobile: true });
+  test.use(PHONE);
 
   test('a touch tap launches with audio running', async ({ page }) => {
     await page.goto(url({ audioprobe: 1 }));
-    await page.touchscreen.tap(200, 500);
+    await page.touchscreen.tap(200, 200);
     const launches = await callNames(page, 'launch');
     expect(launches.length).toBeGreaterThanOrEqual(1);
     expect(launches[0]!.event).toBe('pointerup');
@@ -538,8 +544,8 @@ test.describe('gesture: touch', () => {
   test('a touch drag launches on pointerup, with no click, and audio running', async ({ page, context }) => {
     await page.goto(url({ audioprobe: 1 }));
     const cdp = await context.newCDPSession(page);
-    await touch(cdp, 'touchStart', [{ x: 100, y: 500, id: 1 }]);
-    for (let i = 1; i <= 8; i++) await touch(cdp, 'touchMove', [{ x: 100 + i * 15, y: 500 - i * 6, id: 1 }]);
+    await touch(cdp, 'touchStart', [{ x: 100, y: 300, id: 1 }]);
+    for (let i = 1; i <= 8; i++) await touch(cdp, 'touchMove', [{ x: 100 + i * 15, y: 300 - i * 6, id: 1 }]);
     await touch(cdp, 'touchEnd', []);
     const launches = await callNames(page, 'launch');
     expect(launches.map((c) => c.event)).toEqual(['pointerup']);
@@ -550,7 +556,7 @@ test.describe('gesture: touch', () => {
   test('touch pointerdown alone does not launch', async ({ page, context }) => {
     await page.goto(url({ audioprobe: 1 }));
     const cdp = await context.newCDPSession(page);
-    await touch(cdp, 'touchStart', [{ x: 100, y: 500, id: 1 }]);
+    await touch(cdp, 'touchStart', [{ x: 100, y: 300, id: 1 }]);
     await page.waitForTimeout(100);
     expect(await callNames(page, 'launch')).toEqual([]);
     await touch(cdp, 'touchEnd', []);
@@ -604,11 +610,11 @@ test.describe('gesture: boot', () => {
 });
 
 test.describe('gesture: boot, touch', () => {
-  test.use({ viewport: { width: 390, height: 844 }, deviceScaleFactor: 3, hasTouch: true, isMobile: true });
+  test.use(PHONE);
 
   test('while loading the prompt reads LOADING in place of LAUNCH, and a tap launches nothing', async ({ page }, info) => {
     await page.goto(url({ boot: 'loading' }));
-    await page.touchscreen.tap(200, 500);
+    await page.touchscreen.tap(200, 200);
     await page.waitForTimeout(100);
     expect(await callNames(page, 'launch')).toEqual([]);
     await expect(page.getByRole('button', { name: 'LOADING' })).toBeVisible();
@@ -1337,8 +1343,10 @@ test.describe('firstshow: panels', () => {
 interface Viewport { name: string; width: number; height: number; dpr: number; touch: boolean; kind: 'phone' | 'tablet' | 'desktop' }
 
 const VIEWPORTS: readonly Viewport[] = [
-  { name: 'phone-small', width: 320, height: 568, dpr: 2, touch: true, kind: 'phone' },
-  { name: 'phone-portrait', width: 390, height: 844, dpr: 3, touch: true, kind: 'phone' },
+  // Amendment LS: a touch-first screen this narrow, held upright, shows the rotate gate, so the upright layout is met
+  // only in a narrow desktop window. These two keep a phone's sizes and the phone layout's checks, with a fine pointer.
+  { name: 'narrow-small', width: 320, height: 568, dpr: 2, touch: false, kind: 'phone' },
+  { name: 'narrow-portrait', width: 390, height: 844, dpr: 3, touch: false, kind: 'phone' },
   { name: 'phone-landscape', width: 844, height: 390, dpr: 3, touch: true, kind: 'phone' },
   { name: 'tablet-portrait', width: 820, height: 1180, dpr: 2, touch: true, kind: 'tablet' },
   { name: 'tablet-landscape', width: 1180, height: 820, dpr: 2, touch: true, kind: 'tablet' },
@@ -1539,7 +1547,7 @@ function geometryProblems(d: Dump, v: Viewport, state: StateName): string[] {
     if (v.name === 'superwide' && share > 0.7) p.push(`wordmark ${(share * 100).toFixed(1)}% of superwide`);
   }
   if (d.card) {
-    if (v.name === 'phone-small') {
+    if (v.name === 'narrow-small') {
       if (d.lastControlReachable !== true) p.push('last menu control cannot be scrolled into view');
     } else if (d.card.scrollH > d.card.clientH + 1) {
       p.push(`card scrolls: ${d.card.scrollH} in ${d.card.clientH}`);
@@ -1631,10 +1639,11 @@ test.describe('geometry: card control', () => {
 });
 
 test.describe('geometry: resize', () => {
-  test.use({ viewport: { width: 400, height: 700 }, deviceScaleFactor: 2, hasTouch: true, isMobile: true });
+  // Amendment LS: a narrow desktop window. A phone this narrow, held upright, shows the rotate gate.
+  test.use({ viewport: { width: 400, height: 700 }, deviceScaleFactor: 2 });
 
   test('the sector drops its palette name when the page narrows past 360 px, and gets it back', async ({ page }, info) => {
-    const v: Viewport = { name: 'resize', width: 320, height: 700, dpr: 2, touch: true, kind: 'phone' };
+    const v: Viewport = { name: 'resize', width: 320, height: 700, dpr: 2, touch: false, kind: 'phone' };
     await page.goto(url({ state: 'play-max' }));
     const sector = page.locator('[data-mv="sector"]');
     await expect(sector).toHaveText(/^S\d+ \S/);
@@ -2035,7 +2044,7 @@ test.describe('a11y:', () => {
 });
 
 test.describe('a11y: touch', () => {
-  test.use({ viewport: { width: 390, height: 844 }, deviceScaleFactor: 3, hasTouch: true, isMobile: true });
+  test.use(PHONE);
 
   test('at load on a coarse pointer, the launch button has focus without the ring, and Tab still shows it', async ({ page }) => {
     await page.goto(url());
@@ -3471,7 +3480,7 @@ test.describe('fullscreen: desktop', () => {
   });
 });
 
-for (const v of [{ name: '390x844', width: 390, height: 844, dpr: 3 }, { name: '1024x768', width: 1024, height: 768, dpr: 2 }] as const) {
+for (const v of [{ name: '844x390', width: 844, height: 390, dpr: 3 }, { name: '1024x768', width: 1024, height: 768, dpr: 2 }] as const) {
   test.describe(`fullscreen: touch ${v.name}`, () => {
     test.use({ viewport: { width: v.width, height: v.height }, deviceScaleFactor: v.dpr, hasTouch: true, isMobile: true });
 
@@ -3682,7 +3691,7 @@ test.describe('hud: hidden', () => {
 });
 
 test.describe('hud: hidden, touch', () => {
-  test.use({ viewport: { width: 390, height: 844 }, deviceScaleFactor: 3, hasTouch: true, isMobile: true });
+  test.use(PHONE);
 
   test('(8) a tap on II opens the menu, the hidden BOOST button takes no touch, and a drag and a second finger still boost', async ({ page, context }) => {
     await seedSettings(page, SETTINGS_HIDDEN);
@@ -3690,16 +3699,16 @@ test.describe('hud: hidden, touch', () => {
     const boost = await rectOf(page, '[data-mv="boost"]');
     expect(await hitAt(page, boost.x + boost.w / 2, boost.y + boost.h / 2), 'the hidden BOOST button\'s centre').toBe('stage');
     const cdp = await context.newCDPSession(page);
-    await touch(cdp, 'touchStart', [{ x: 195, y: 520, id: 1 }]);
-    for (let i = 1; i <= 4; i++) await touch(cdp, 'touchMove', [{ x: 195 + i * 10, y: 520, id: 1 }]);
+    await touch(cdp, 'touchStart', [{ x: 400, y: 200, id: 1 }]);
+    for (let i = 1; i <= 4; i++) await touch(cdp, 'touchMove', [{ x: 400 + i * 10, y: 200, id: 1 }]);
     await afterFrames(page);
     let f = await sample(page);
     expect(f.absolute).toBe(true);
     expect(f.boost).toBe(false);
-    await touch(cdp, 'touchStart', [{ x: 235, y: 520, id: 1 }, { x: 300, y: 300, id: 2 }]);
+    await touch(cdp, 'touchStart', [{ x: 440, y: 200, id: 1 }, { x: 600, y: 150, id: 2 }]);
     f = await sample(page);
     expect(f.boost, 'a second finger boosts').toBe(true);
-    await touch(cdp, 'touchEnd', [{ x: 300, y: 300, id: 2 }]);
+    await touch(cdp, 'touchEnd', [{ x: 600, y: 150, id: 2 }]);
     f = await sample(page);
     expect(f.boost, 'lifting it stops').toBe(false);
     await touch(cdp, 'touchEnd', []);
@@ -3876,12 +3885,12 @@ test.describe('app: fullscreen', () => {
   });
 
   test.describe('phone', () => {
-    test.use({ viewport: { width: 390, height: 844 }, deviceScaleFactor: 3, hasTouch: true, isMobile: true });
+    test.use(PHONE);
 
-    test('390x844 then 844x390: a tap launches, a tap on II opens CRUISE, a tap on FULLSCREEN engages, and a rotation is followed', async ({ page }, info) => {
+    test('844x390 then 390x844: a tap launches, a tap on II opens CRUISE, a tap on FULLSCREEN engages, and a rotation is followed, to the rotate gate', async ({ page }, info) => {
       test.setTimeout(120_000);
       await openApp(page);
-      await page.touchscreen.tap(195, 600);
+      await page.touchscreen.tap(422, 120);
       await expect(page.locator('html')).toHaveAttribute('data-mv-mode', 'play');
       // Past the 36-tick guard that keeps a launching tap from also pressing II.
       await nodeWait(800);
@@ -3893,15 +3902,20 @@ test.describe('app: fullscreen', () => {
       let r = await appFill(page);
       console.log(`A31 phone in fullscreen: ${JSON.stringify(r)}`);
       expect(r).toMatchObject({ fs: 'HTML', box: true, mode: 'cruise' });
-      expectFills(r, 390, 844, 'fullscreen at 390x844');
-      await page.setViewportSize({ width: 844, height: 390 });
+      expectFills(r, 844, 390, 'fullscreen at 844x390');
+      await saveCssShot(page, info, 'app-fullscreen-phone-844x390');
+      await page.setViewportSize({ width: 390, height: 844 });
       expect(await fsCount(page), 'setViewportSize fired no fullscreen event').toBe(n);
-      await expect.poll(async () => (await appFill(page)).canvas, { timeout: 1000 }).toEqual([0, 0, 844, 390]);
+      await expect.poll(async () => (await appFill(page)).canvas, { timeout: 1000 }).toEqual([0, 0, 390, 844]);
       r = await appFill(page);
       console.log(`A31 phone after the rotation: ${JSON.stringify(r)}`);
       expect(r.fs).toBe('HTML');
-      expectFills(r, 844, 390, 'fullscreen at 844x390');
-      await saveCssShot(page, info, 'app-fullscreen-phone-844x390');
+      expectFills(r, 390, 844, 'fullscreen at 390x844');
+      // Amendment LS: upright, the page still fills the screen and the rotate gate is what shows on it.
+      await expect(page.locator('#mv-ui')).toHaveAttribute('data-rotate', '1');
+      await expect(page.locator('[data-mv="rotate"]')).toBeVisible();
+      expect(r.mode).toBe('cruise');
+      await saveCssShot(page, info, 'app-fullscreen-phone-390x844-gate');
     });
   });
 });
@@ -4042,7 +4056,7 @@ function hiddenHudProblems(d: Dump): string[] {
   return p;
 }
 
-for (const name of ['phone-small', 'phone-portrait', 'phone-landscape', 'tablet-768x1024', 'tablet-1024x768', 'hd-1280x720', 'desktop']) {
+for (const name of ['narrow-small', 'narrow-portrait', 'phone-landscape', 'tablet-768x1024', 'tablet-1024x768', 'hd-1280x720', 'desktop']) {
   const v = viewportNamed(name);
   test.describe(`geometry: HUD hidden, ${v.name}`, () => {
     useViewport(v);
@@ -4056,7 +4070,7 @@ for (const name of ['phone-small', 'phone-portrait', 'phone-landscape', 'tablet-
   });
 }
 
-for (const name of ['phone-small', 'phone-portrait', 'phone-landscape']) {
+for (const name of ['narrow-small', 'narrow-portrait', 'phone-landscape']) {
   const v = viewportNamed(name);
   test.describe(`geometry: no element fullscreen, ${v.name}`, () => {
     useViewport(v);
@@ -4089,7 +4103,7 @@ test.describe('geometry: toggles control, rows', () => {
 });
 
 test.describe('geometry: toggles control, three columns', () => {
-  const v = viewportNamed('phone-small');
+  const v = viewportNamed('narrow-small');
   useViewport(v);
 
   test('three columns at 320 px wide give toggle clip and toggle overlap', async ({ page }) => {
@@ -4108,13 +4122,13 @@ test.describe('geometry: toggles control, three columns', () => {
 interface FhReview extends Viewport { notices: boolean; nofs: boolean; focus: boolean; only: 'cruise' | null }
 
 const FH_REVIEW: readonly FhReview[] = [
-  { ...viewportNamed('phone-portrait'), notices: true, nofs: true, focus: false, only: null },
+  { ...viewportNamed('narrow-portrait'), notices: true, nofs: true, focus: false, only: null },
   { ...viewportNamed('phone-landscape'), notices: false, nofs: true, focus: false, only: null },
   { ...viewportNamed('tablet-768x1024'), notices: false, nofs: false, focus: false, only: null },
   { ...viewportNamed('tablet-1024x768'), notices: false, nofs: false, focus: false, only: null },
   { ...viewportNamed('desktop'), notices: true, nofs: false, focus: true, only: null },
   { ...viewportNamed('hd-1280x720'), notices: false, nofs: false, focus: false, only: null },
-  { ...viewportNamed('phone-small'), notices: false, nofs: false, focus: false, only: 'cruise' },
+  { ...viewportNamed('narrow-small'), notices: false, nofs: false, focus: false, only: 'cruise' },
 ];
 
 for (const v of FH_REVIEW) {
@@ -4305,11 +4319,11 @@ test.describe('launch: hud choice', () => {
 });
 
 test.describe('launch: hud choice, touch', () => {
-  test.use({ viewport: { width: 390, height: 844 }, deviceScaleFactor: 3, hasTouch: true, isMobile: true });
+  test.use(PHONE);
 
   test('A42: on a phone both start buttons are 44 px targets inside the viewport', async ({ page }, info) => {
     await page.goto(url());
-    expectStartButtonsFit(await startButtons(page), 390, 844);
+    expectStartButtonsFit(await startButtons(page), 844, 390);
     await saveCssShot(page, info, 'lh-title-phone');
   });
 
@@ -4412,5 +4426,219 @@ test.describe('wordmark: forced dark', () => {
     } finally {
       await browser.close();
     }
+  });
+});
+
+// ---- rotate: amendment LS. A phone held upright shows the rotate gate in every state but a fatal one, and plays nothing. ----
+
+const UPRIGHT_PHONES: readonly Viewport[] = [
+  { name: 'upright-320x568', width: 320, height: 568, dpr: 2, touch: true, kind: 'phone' },
+  { name: 'upright-390x844', width: 390, height: 844, dpr: 3, touch: true, kind: 'phone' },
+  { name: 'upright-448x998', width: 448, height: 998, dpr: 3, touch: true, kind: 'phone' },
+];
+
+interface GateRead {
+  attr: string | null; box: Box | null; hits: boolean[]; shown: string[]; text: Box[]; fonts: number[]; scroll: boolean; fatal: boolean; fatalHits: boolean[];
+}
+
+/** What the page shows of the gate: its box, what nine points across the screen meet, and every data-mv box in sight. */
+async function readGate(page: Page): Promise<GateRead> {
+  return page.evaluate(() => {
+    const boxOf = (el: Element): { x: number; y: number; w: number; h: number } => {
+      const r = el.getBoundingClientRect();
+      return { x: r.left, y: r.top, w: r.width, h: r.height };
+    };
+    const visible = (el: Element): boolean => {
+      const r = el.getBoundingClientRect();
+      const cs = getComputedStyle(el);
+      return r.width > 0 && r.height > 0 && cs.visibility !== 'hidden' && cs.display !== 'none';
+    };
+    const gate = document.querySelector('.mv-rotate');
+    const hits: boolean[] = [];
+    const fatalHits: boolean[] = [];
+    for (const fy of [0.03, 0.5, 0.97]) {
+      for (const fx of [0.03, 0.5, 0.97]) {
+        const at = document.elementFromPoint(innerWidth * fx, innerHeight * fy);
+        hits.push(at?.closest('.mv-rotate') != null);
+        fatalHits.push(at?.closest('.mv-fatal') != null);
+      }
+    }
+    const text = Array.from(document.querySelectorAll('.mv-rotate-head, .mv-rotate-sub, .mv-rotate-icon')).filter(visible);
+    return {
+      attr: document.querySelector('.mv-ui')?.getAttribute('data-rotate') ?? null,
+      box: gate !== null && visible(gate) ? boxOf(gate) : null,
+      hits, fatalHits,
+      shown: Array.from(document.querySelectorAll('.mv-ui [data-mv]')).filter(visible).map((el) => el.getAttribute('data-mv') ?? ''),
+      text: text.map((el) => {
+        const range = document.createRange();
+        range.selectNodeContents(el);
+        const r = el.classList.contains('mv-rotate-icon') ? el.getBoundingClientRect() : range.getBoundingClientRect();
+        return { x: r.left, y: r.top, w: r.width, h: r.height };
+      }),
+      fonts: text.filter((el) => !el.classList.contains('mv-rotate-icon')).map((el) => parseFloat(getComputedStyle(el).fontSize)),
+      scroll: document.documentElement.scrollWidth > innerWidth || document.documentElement.scrollHeight > innerHeight,
+      fatal: document.querySelector('.mv-fatal') !== null,
+    };
+  });
+}
+
+for (const v of UPRIGHT_PHONES) {
+  test.describe(`rotate: ${v.name}`, () => {
+    useViewport(v);
+    for (const state of STATE_NAMES) {
+      test(state, async ({ page }) => {
+        await page.goto(url({ state }));
+        const g = await readGate(page);
+        expect(g.scroll, 'the page scrolls').toBe(false);
+        if (state.startsWith('fatal')) {
+          // The fatal page is its own layer above the UI, and says what broke; the gate does not cover it.
+          expect(g.fatal).toBe(true);
+          expect(g.fatalHits).toEqual(new Array(9).fill(true));
+          return;
+        }
+        expect(g.attr).toBe('1');
+        expect(g.box, 'the gate fills the screen').toEqual({ x: 0, y: 0, w: v.width, h: v.height });
+        expect(g.hits, 'the gate is what a touch meets, at nine points').toEqual(new Array(9).fill(true));
+        expect(g.shown.sort(), 'nothing else of the UI is in sight').toEqual(['rotate', 'rotate-head']);
+        // The icon and both lines are inside the screen, with a margin, and readable.
+        expect(g.text.length).toBe(3);
+        for (const b of g.text) {
+          expect(b.x).toBeGreaterThanOrEqual(8);
+          expect(b.x + b.w).toBeLessThanOrEqual(v.width - 8);
+          expect(b.y).toBeGreaterThanOrEqual(8);
+          expect(b.y + b.h).toBeLessThanOrEqual(v.height - 8);
+        }
+        for (const px of g.fonts) expect(px).toBeGreaterThanOrEqual(12);
+      });
+    }
+  });
+}
+
+test.describe('rotate: not gated', () => {
+  for (const v of [
+    { name: 'phone sideways', width: 844, height: 390, touch: true },
+    { name: 'touch, 600 wide, upright', width: 600, height: 900, touch: true },
+    { name: 'tablet upright', width: 820, height: 1180, touch: true },
+    { name: 'narrow desktop window', width: 390, height: 844, touch: false },
+  ] as const) {
+    test.describe(v.name, () => {
+      test.use({ viewport: { width: v.width, height: v.height }, hasTouch: v.touch, isMobile: v.touch });
+      test('the title shows and the gate does not', async ({ page }) => {
+        await page.goto(url());
+        const g = await readGate(page);
+        expect(g.attr).toBe('0');
+        expect(g.box).toBe(null);
+        expect(g.shown).toContain('launch');
+      });
+    });
+  }
+
+  test.describe('control: 599 wide', () => {
+    test.use({ viewport: { width: 599, height: 900 }, hasTouch: true, isMobile: true });
+    test('one pixel narrower than a tablet, upright and touch first, is gated', async ({ page }) => {
+      await page.goto(url());
+      expect((await readGate(page)).attr).toBe('1');
+    });
+  });
+});
+
+test.describe('rotate: behaviour', () => {
+  test.use(PHONE);
+  const UPRIGHT = { width: 390, height: 844 };
+  const SIDEWAYS = { width: 844, height: 390 };
+  /** The media query reports its change in the next rendering step, which a real loop always reaches before ui.frame. */
+  const turn = async (page: Page, to: { width: number; height: number }): Promise<void> => {
+    await page.setViewportSize(to);
+    await afterFrames(page);
+  };
+
+  test('upright on the title, neither a tap nor a key launches; turned, a tap does', async ({ page }) => {
+    await page.goto(url());
+    await turn(page, UPRIGHT);
+    await expect(page.locator('.mv-ui')).toHaveAttribute('data-rotate', '1');
+    await page.touchscreen.tap(195, 600);
+    await page.touchscreen.tap(195, 250);
+    await page.keyboard.press('Enter');
+    await page.keyboard.press('Space');
+    await page.waitForTimeout(100);
+    expect(await callNames(page, 'launch')).toEqual([]);
+    await turn(page, SIDEWAYS);
+    await expect(page.locator('.mv-ui')).toHaveAttribute('data-rotate', '0');
+    await page.touchscreen.tap(200, 200);
+    expect((await callNames(page, 'launch')).length).toBeGreaterThanOrEqual(1);
+  });
+
+  test('turned upright in PLAY, the run is parked once, and no later frame asks again', async ({ page }) => {
+    await page.goto(url({ state: 'play' }));
+    expect(await callNames(page, 'togglePause')).toEqual([]);
+    await turn(page, UPRIGHT);
+    await page.evaluate(() => { window.__ui!.step(1); });
+    expect((await callNames(page, 'togglePause')).length).toBe(1);
+    await expect(page.locator('html')).toHaveAttribute('data-mv-mode', 'cruise');
+    await page.evaluate(() => { window.__ui!.step(30); });
+    expect((await callNames(page, 'togglePause')).length).toBe(1);
+  });
+
+  test('upright in CRUISE, P, Esc and a tap resume nothing; turned back, RESUME is there and resumes', async ({ page }) => {
+    await page.goto(url({ state: 'cruise' }));
+    await turn(page, UPRIGHT);
+    await page.evaluate(() => { window.__ui!.step(2); });
+    await page.keyboard.press('KeyP');
+    await page.keyboard.press('Escape');
+    await page.touchscreen.tap(195, 420);
+    await page.waitForTimeout(100);
+    expect(await callNames(page, 'togglePause')).toEqual([]);
+    await expect(page.locator('[data-mv="resume"]')).toBeHidden();
+    await turn(page, SIDEWAYS);
+    await page.evaluate(() => { window.__ui!.step(2); });
+    await expect(page.locator('[data-mv="resume"]')).toBeVisible();
+    const r = await rectOf(page, '[data-mv="resume"]');
+    await page.touchscreen.tap(r.x + r.w / 2, r.y + r.h / 2);
+    await page.waitForTimeout(100);
+    expect((await callNames(page, 'togglePause')).length).toBe(1);
+  });
+
+  test('control: turned upright in CRUISE asks for no pause, and a turn back and forth in DEMO asks for nothing', async ({ page }) => {
+    await page.goto(url({ state: 'cruise' }));
+    await turn(page, UPRIGHT);
+    await page.evaluate(() => { window.__ui!.step(4); });
+    expect(await callNames(page, 'togglePause')).toEqual([]);
+    await page.goto(url());
+    await turn(page, UPRIGHT);
+    await page.evaluate(() => { window.__ui!.step(4); });
+    await turn(page, SIDEWAYS);
+    await page.evaluate(() => { window.__ui!.step(4); });
+    expect(await callsOf(page)).toEqual(expect.not.arrayContaining([expect.objectContaining({ name: 'togglePause' })]));
+    expect(await callNames(page, 'launch')).toEqual([]);
+  });
+
+  test('turned back on the title, the start button has focus again, without the ring', async ({ page }) => {
+    await page.goto(url());
+    await turn(page, UPRIGHT);
+    expect(await page.evaluate(() => document.activeElement?.getAttribute('data-mv') ?? document.activeElement?.tagName)).toBe('BODY');
+    await turn(page, SIDEWAYS);
+    const at = await page.evaluate(() => {
+      const a = document.activeElement!;
+      return { hook: a.getAttribute('data-mv'), visible: a.matches(':focus-visible') };
+    });
+    expect(at).toEqual({ hook: 'launch', visible: false });
+  });
+
+  test('the phone in the icon turns, and under reduced motion it is drawn on its side and nothing moves', async ({ page }, info) => {
+    await page.goto(url());
+    await turn(page, UPRIGHT);
+    const names = await page.evaluate(() => document.getAnimations().map((a) => (a as CSSAnimation).animationName));
+    expect(names).toContain('mv-rotate-turn');
+    await saveShot(page, info, 'rotate-gate');
+    await page.emulateMedia({ reducedMotion: 'reduce' });
+    await page.goto(url());
+    await turn(page, UPRIGHT);
+    await expect(page.locator('.mv-ui')).toHaveAttribute('data-reduced', '1');
+    const still = await page.evaluate(() => {
+      const r = document.querySelector('.mv-rotate-phone')!.getBoundingClientRect();
+      return { animations: document.getAnimations().length, wide: r.width > r.height };
+    });
+    expect(still).toEqual({ animations: 0, wide: true });
+    await saveShot(page, info, 'rotate-gate-reduced');
   });
 });

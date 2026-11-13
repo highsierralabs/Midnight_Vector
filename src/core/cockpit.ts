@@ -19,7 +19,7 @@ export function cockpitUnit(w: number, h: number): number {
 
 export interface CockpitRect { readonly x0: number; readonly y0: number; readonly x1: number; readonly y1: number }
 
-/** The dashboard's top edge. Nothing of the cockpit but the canopy struts is drawn above it. */
+/** The dashboard's top edge. Above it are only the canopy's pillars and its roof, which hangs from the stage's top edge. */
 export const COCKPIT_DASH_TOP = 0.3;
 
 /** The two instrument panels, one to each side of the wheel. A bezel is drawn around each. */

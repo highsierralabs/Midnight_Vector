@@ -7,7 +7,9 @@ import {
   COCKPIT_DASH_TOP, COCKPIT_EYE_Y, COCKPIT_HUB, COCKPIT_PANELS, COCKPIT_WHEEL_PULL, COCKPIT_WHEEL_REACH, COCKPIT_WHEEL_TURN, type CockpitRect,
 } from '../../../src/core/cockpit';
 import type { BuiltMesh } from '../../../src/render/props/builders';
-import { CockpitPart, DASH_PROFILE, buildCockpit, createYokePose, wheelPoint, wheelReach, yokePose } from '../../../src/render/props/cockpit';
+import {
+  COCKPIT_RIG_TOP, CockpitPart, DASH_PROFILE, ROOF_PROFILE, buildCockpit, createYokePose, wheelPoint, wheelReach, yokePose,
+} from '../../../src/render/props/cockpit';
 import { cockpitConstants } from '../../../src/render/props/material';
 import { BANK_MAX, PITCH_MAX, createShipPose, shipPose } from '../../../src/render/props/ship';
 import vertSource from '../../../src/render/props/glsl/cockpit.vert.glsl?raw';
@@ -67,15 +69,69 @@ describe('buildCockpit', () => {
     expect(glassBounds(mesh, -1)).not.toEqual(f32(moved));
   });
 
-  it('the dashboard tops out at COCKPIT_DASH_TOP, symmetrically, and nothing but the struts rises above it', () => {
+  it('the dashboard tops out at COCKPIT_DASH_TOP, symmetrically, and nothing rises above it but the pillars and what hangs from the top edge', () => {
     expect(Math.max(...DASH_PROFILE.map((q) => q[1]))).toBe(COCKPIT_DASH_TOP);
     for (let i = 0; i < DASH_PROFILE.length; i++) {
       const a = DASH_PROFILE[i]!, b = DASH_PROFILE[DASH_PROFILE.length - 1 - i]!;
       expect([a[0], a[1]]).toEqual([-b[0], b[1]]);
     }
     for (let i = 0; i < count; i++) {
-      if (partOf(i) === CockpitPart.STRUT) continue;
+      if (partOf(i) === CockpitPart.STRUT || rigOf(i) === COCKPIT_RIG_TOP) continue;
       expect(mesh.position[i * 3 + 1]!).toBeLessThanOrEqual(Math.fround(COCKPIT_DASH_TOP));
+    }
+  });
+
+  /** The roof's lower edge at x, for a stage one unit high. */
+  const roofAt = (x: number): number => {
+    for (let i = 0; i + 1 < ROOF_PROFILE.length; i++) {
+      const [x0, y0] = ROOF_PROFILE[i]!, [x1, y1] = ROOF_PROFILE[i + 1]!;
+      if (x >= x0 && x <= x1) return y0 + ((y1 - y0) * (x - x0)) / (x1 - x0);
+    }
+    return NaN;
+  };
+
+  it('the roof is symmetric, spans the dashboard, and leaves the windscreen open between the cowl and itself', () => {
+    for (let i = 0; i < ROOF_PROFILE.length; i++) {
+      const a = ROOF_PROFILE[i]!, b = ROOF_PROFILE[ROOF_PROFILE.length - 1 - i]!;
+      expect([a[0], a[1]]).toEqual([-b[0], b[1]]);
+    }
+    expect(ROOF_PROFILE[0]![0]).toBe(DASH_PROFILE[0]![0]);
+    const low = Math.min(...ROOF_PROFILE.map((q) => q[1]));
+    // More than half of a stage one unit high stays clear, and the roof takes no more than its top 15%.
+    expect(low - COCKPIT_DASH_TOP).toBeGreaterThan(0.5);
+    expect(low).toBeGreaterThanOrEqual(0.85);
+    // Its top is above the stage's top edge, so it has no upper edge in frame.
+    let high = -Infinity;
+    for (let i = 0; i < count; i++) if (partOf(i) === CockpitPart.ROOF) high = Math.max(high, mesh.position[i * 3 + 1]!);
+    expect(high).toBeGreaterThan(1);
+  });
+
+  it('every pillar stands on the bottom edge and its head hangs from the top edge, inside the roof, so the two always join', () => {
+    let feet = 0, heads = 0;
+    for (let i = 0; i < count; i++) {
+      if (partOf(i) !== CockpitPart.STRUT) continue;
+      const x = mesh.position[i * 3]!, y = mesh.position[i * 3 + 1]!;
+      if (rigOf(i) === COCKPIT_RIG_TOP) {
+        heads++;
+        expect(y, `pillar head at x ${x}`).toBeGreaterThanOrEqual(Math.fround(roofAt(x)));
+      } else {
+        feet++;
+        expect(rigOf(i)).toBe(0);
+        expect(y).toBeLessThan(COCKPIT_DASH_TOP);
+      }
+    }
+    // Two pillars a side, two vertices at each end.
+    expect([feet, heads]).toEqual([8, 8]);
+  });
+
+  it('control: a pillar head short of the roof would be seen', () => {
+    expect(0.8).toBeLessThan(roofAt(0.79));
+  });
+
+  it('the roof and everything on it hang from the top edge, and nothing below the windscreen does', () => {
+    for (let i = 0; i < count; i++) {
+      if (partOf(i) === CockpitPart.ROOF) expect(rigOf(i)).toBe(COCKPIT_RIG_TOP);
+      if (rigOf(i) === COCKPIT_RIG_TOP) expect(mesh.position[i * 3 + 1]!).toBeGreaterThanOrEqual(0.85);
     }
   });
 
@@ -90,11 +146,12 @@ describe('buildCockpit', () => {
     }
   });
 
-  it('is in painter\'s order: struts, then dashboard and panels, then the wheel, then sleeves, then gloves', () => {
+  it('is in painter\'s order: pillars, then the roof, then dashboard and panels, then the wheel, then sleeves, then gloves', () => {
     const first = (part: number): number => { for (let t = 0; t < mesh.index.length; t++) if (partOf(mesh.index[t]!) === part) return t; return -1; };
     const last = (part: number): number => { for (let t = mesh.index.length - 1; t >= 0; t--) if (partOf(mesh.index[t]!) === part) return t; return -1; };
     const P = CockpitPart;
-    expect(last(P.STRUT)).toBeLessThan(first(P.DASH));
+    expect(last(P.STRUT)).toBeLessThan(first(P.ROOF));
+    expect(last(P.ROOF)).toBeLessThan(first(P.DASH));
     expect(last(P.DASH)).toBeLessThan(first(P.GLASS));
     expect(last(P.GLASS)).toBeLessThan(first(P.WHEEL));
     expect(last(P.TRIM)).toBeLessThan(first(P.WHEEL));
@@ -107,10 +164,39 @@ describe('buildCockpit', () => {
     expect(wheelReach(mesh)).toBeGreaterThan(0.15);
     for (let i = 0; i < count; i++) {
       const part = partOf(i), rig = rigOf(i);
-      expect(rig === 0 || rig === 1).toBe(true);
+      expect(rig === 0 || rig === 1 || rig === COCKPIT_RIG_TOP).toBe(true);
       if (part === CockpitPart.WHEEL || part === CockpitPart.GLOVE) expect(rig).toBe(1);
-      if (part === CockpitPart.DASH || part === CockpitPart.GLASS || part === CockpitPart.STRUT) expect(rig).toBe(0);
+      if (part === CockpitPart.DASH || part === CockpitPart.GLASS) expect(rig).toBe(0);
+      if (part === CockpitPart.SLEEVE) expect(rig === 0 || rig === 1).toBe(true);
     }
+  });
+
+  it('each glove shows the back of the hand: the wrist outside its grip, the fingers going round the grip\'s inner side', () => {
+    // The right grip at rest, from the mesh: the wheel's vertices right of the crossbar's end.
+    const hy = COCKPIT_HUB.y;
+    let gripIn = Infinity, gripOut = -Infinity;
+    for (let i = 0; i < count; i++) {
+      if (partOf(i) !== CockpitPart.WHEEL) continue;
+      const x = mesh.position[i * 3]!, y = mesh.position[i * 3 + 1]!;
+      if (y > hy + 0.05) { gripIn = Math.min(gripIn, Math.abs(x)); gripOut = Math.max(gripOut, Math.abs(x)); }
+    }
+    let handIn = Infinity, handOut = -Infinity, low = Infinity, high = -Infinity;
+    for (let i = 0; i < count; i++) {
+      if (partOf(i) !== CockpitPart.GLOVE || mesh.position[i * 3]! < 0) continue;
+      const x = mesh.position[i * 3]!, y = mesh.position[i * 3 + 1]!;
+      handIn = Math.min(handIn, x); handOut = Math.max(handOut, x); low = Math.min(low, y); high = Math.max(high, y);
+    }
+    expect(handIn).toBeLessThan(gripIn);
+    expect(handOut).toBeGreaterThan(gripOut + 0.02);
+    // The grip shows above and below the hand, so the hand is seen to hold something.
+    let gripLow = Infinity, gripHigh = -Infinity;
+    for (let i = 0; i < count; i++) {
+      if (partOf(i) !== CockpitPart.WHEEL || mesh.position[i * 3]! < 0.13) continue;
+      gripLow = Math.min(gripLow, mesh.position[i * 3 + 1]!); gripHigh = Math.max(gripHigh, mesh.position[i * 3 + 1]!);
+    }
+    expect(gripHigh).toBeGreaterThan(hy + 0.085);
+    expect(gripLow).toBeLessThan(low + 0.02);
+    expect(high - low).toBeLessThan(0.12);
   });
 });
 
@@ -189,5 +275,12 @@ describe('the vertex program reads the layout\'s numbers', () => {
   it('and uses each of them, with the turn clockwise for right', () => {
     for (const name of ['COCKPIT_HUB', 'COCKPIT_EYE', 'COCKPIT_TURN', 'COCKPIT_PULL', 'COCKPIT_ZOOM']) expect(vertSource).toContain(name);
     expect(vertSource).toContain('float a = -uYoke.x * COCKPIT_TURN;');
+  });
+
+  it('and hangs rig 2 from the stage\'s top edge, leaving the wheel\'s rig 0 or 1', () => {
+    expect(vertSource).toContain('float top = step(1.5, aTag.y);');
+    expect(vertSource).toContain('float rig = aTag.y - 2. * top;');
+    expect(vertSource).toContain('q.y += top * (2. / uCockpit.y - 1.);');
+    expect(COCKPIT_RIG_TOP).toBe(2);
   });
 });

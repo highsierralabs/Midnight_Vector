@@ -1,12 +1,12 @@
 ---
 id: T13-views
 title: Camera views - a cockpit view with a dashboard, wheel and arms, and a nose camera
-status: blocked
+status: done
 owner: T13 executor, for the operator
 depends_on: [T10, T11]
 owns: [tests/views/**, plans/T13-views.md]
 reads: [architecture.md, Agents.md, plans/**, src/**, tests/**, dev/**, scripts/**, package.json, playwright.config.ts]
-updated: 2026-11-13T02:15Z
+updated: 2026-11-13T04:01Z
 ---
 
 ## 1. Purpose
@@ -28,6 +28,8 @@ Working directory `C:\highsierralabs\Midnight_Vector`. Read `Agents.md` first, t
 **The operator's request (2026-11-12, verbatim):** "I want to look at adding a couple new views. Currently we have a chase camera. I would like to see about adding a cockpit view and a nose camera. The cockpit view should have a dashboard for the ship. We can move the HUD elements to the dasboard instruments in cockpit view. The "steering wheel" should be visible with the players arms holding on to it. The wheel should turn left and right, pull back when acending, and push forward when decending following the players inputs. The nose camera is just that, a camera on the nose of the ship facing forward giving the player the feeling that they are flying through the landscape."
 
 **The operator's design choices (2026-11-12, in session).** Four were put and answered, verbatim: "1 Agreed. Scene geometry with DOM readouts on the dash. 2 Use the ship motion. 3 Yes. 4 Yes." They are R-1 to R-4 in section 11.
+
+**The operator's review of the first build (2026-11-13Z, in session, after playing it; verbatim):** "The nose camera works well, no changes. The cockpit view needs a roof. The canopy struts work but without the roof the struts don't connect to anything and it doesn't feel like you are inside the ship. The gloves read like the hands are rendered backwards with the fingers facing the camera instead of the back of the hand. The move between cameras works well. Sparkle in Cyber Canyon, accept. It was not noticeable in my playthrough. Field-of-view cap, accepted. Seeing the cockpit view in portrait made me realize I never play in portrait mode. It isn't as visually appealing as landscape mode or as easy to control. I want to enforce landscape mode on phones. I've seen other games use the little phone icon that flips to its side to show that you should be playing the game in landscape mode. Commit the work so far before continuing." The first build was committed as `78ecb01` before anything below was written. The review settles M4's two decisions (R-13 ratified, R-14), passes HC-V4 and the nose camera's part of HC-V2, reports two defects against HC-V1, and asks for one new thing. Section 5's round 2 is the work that follows, and the review is its approval.
 
 **How the camera works today** [O: read in the source at `4ec588d`]:
 
@@ -161,6 +163,27 @@ Proof: A10, A11.
 Work: tune the move in and out of each view; run all of section 7; write the `architecture.md` text (§3.3 step 5, §6.1, §7.3, §7.5, §9's draw list); paste evidence into this plan and each reopened plan; build `dist/` so the operator can play it over the tailnet; hand over the human checks.
 Result: every reopened plan `done`; this plan `done` with its human checks listed open.
 
+**Round 2, from the operator's review of the first build (section 2).**
+
+**M8. A roof over the cockpit (T05).**
+Work: the two thin struts become windscreen pillars that lean outward from the cowl's shoulders to a roof; a second pillar a side stands behind them, in frame only on a stage wider than 21:9. The roof is a band across the top of the frame with a lined lower edge that arches a little over the windscreen, a second line over that edge as the cowl has, and a small overhead console at the centre. It hangs from the stage's top edge: a new rig value, 2, shifts a vertex up by the stage's height over one cockpit unit, read from the unit the program already has, so on a stage narrower than 1.6:1 the roof stays at the top and each pillar stretches to it. No uniform, program or draw call is added.
+Result: the windscreen is framed on all four sides, at every stage shape.
+Proof: A15; stills at 16:9, 21:9, 4:3 and 390 x 844, looked at.
+
+**M9. Gloves seen from the back (T05).**
+Work: each glove was four bands across its grip, which reads as fingers wrapped toward the viewer. It becomes the back of a hand laid across the grip, in a frame that runs from the wrist, outside the grip, to the knuckles: a cuff, the back of the hand with a pad on it, four knuckles with the first joint of each finger going away round the grip's inner side, and the thumb along the top. The forearm meets the cuff square on. The grip shows above and below the hand.
+Result: the pilot's hands read as the pilot's own.
+Proof: A15; enlarged crops of both hands with the wheel turned each way, looked at.
+
+**M10. Phones play in landscape (T08; T10 for its e2e rows).**
+Work: a rotate gate. On a touch-first screen under 600 CSS px wide, held upright, the UI covers the stage with a phone drawn in lines that turns onto its side and the words ROTATE YOUR PHONE. One media query decides (`src/ui/rotate.ts`). The gate takes every touch, hides the rest of the UI, parks a run it finds in PLAY, and holds a launch and a resume until the phone is turned. Tablets and narrow desktop windows keep the upright layout. Every test that used an upright phone to mean "a phone" holds it sideways instead, the two upright shapes of T08's geometry table become narrow desktop windows, and the gate gets rows of its own on the dev page and on the real build.
+Result: an upright phone shows the prompt and nothing else; turned, the game is where it was.
+Proof: A16, A17.
+
+**M11. Close.**
+Work: section 7 again on the final code; the `architecture.md` text (§6.1, §7.5, §13); the plans of T00, T05, T08 and T10; the build for the tailnet.
+Result: every reopened plan `done`; this plan `done` with its human checks listed.
+
 ## 6. Concrete steps
 
 PowerShell 5.1, from `C:\highsierralabs\Midnight_Vector`. T13's port is 5113 and its output folder `test-results/T13`.
@@ -198,13 +221,16 @@ One GPU suite at a time. No `npm install`.
 | A12 | M4's table | Written; the decision rule applied | |
 | A13 | `gpu-timing`, one run per view, same state | Frame p95 in each first-person view within .3 ms of chase; reported, one machine | |
 | A14 | `npm run check`, `plans:check`, `contracts:check` | Exit 0 | |
+| A15 | `tests/unit/props/cockpit.test.ts`: the roof, the pillars and the gloves | The roof spans the dashboard, is symmetric, and leaves more than half of a unit-high stage clear; every pillar's foot is rig 0 and its head rig 2 and inside the roof; everything on the roof is rig 2; each glove reaches inside its grip's inner edge and outside its outer edge, and the grip shows above and below it; the wheel's reach still holds | A pillar head at .8 is below the roof: seen |
+| A16 | The rotate gate: `ui.spec.ts -g "rotate:"` on the dev page, and `tests/views/rotate.spec.ts` on the real build | Upright at 320, 390 and 448 px wide, in every state but the fatal one, the gate fills the screen, is what nine points across it meet, and nothing else of the UI is in sight; the fatal page shows above it. Not gated: a phone sideways, touch at 600 px wide, a tablet upright, a narrow desktop window. Upright, no tap or key launches or resumes; a run in PLAY is parked once; turned back, RESUME resumes and the start button has focus. Under reduced motion nothing moves and the phone is drawn on its side | Six mutations, each restored by bytes: the hide rule, the launch hold, the resume hold, the park, the width line at 700, the gate's pointer events. Each fails its rows |
+| A17 | A8 and A14 again on the final code | All pass. The rows that used an upright phone hold it sideways; none is dropped | |
 
 **Human checks**, which do not block `done`:
 
-- **HC-V1.** The cockpit's look: dashboard, instruments, wheel and arms.
-- **HC-V2.** Playing each view: is it fun, fair and comfortable, and is the roll right.
-- **HC-V3.** Both views on a real phone, portrait and landscape.
-- **HC-V4.** The move between cameras.
+- **HC-V1.** The cockpit's look: dashboard, instruments, wheel and arms. *Reported by the operator, 2026-11-13Z: the struts joined nothing and the gloves read as seen from the front. Both repaired in M8 and M9. Open again, for the roof and the new gloves.*
+- **HC-V2.** Playing each view: is it fun, fair and comfortable, and is the roll right. *The nose camera: passed by the operator, "works well, no changes". The cockpit: open, with its roof.*
+- **HC-V3.** Both views on a real phone. *Changed by M10: held sideways, both views play; held upright, the rotate gate shows, the run is parked, and turning back returns the game. Also what a phone with its rotation locked does, which no test here can show. Open.*
+- **HC-V4.** The move between cameras. *Passed by the operator: "The move between cameras works well."*
 
 ## 8. Idempotence and recovery
 
@@ -218,7 +244,7 @@ One GPU suite at a time. No `npm install`.
 - [x] 2026-11-13T00:35Z Investigation and probe (section 2). Design choices put to the operator and answered (R-1 to R-4).
 - [x] 2026-11-13T00:35Z This plan drafted. Not registered in §12 yet; that is M0, after approval.
 - [x] 2026-11-13T00:50Z Approved by the operator in session, verbatim: "approved". Status `in-progress`.
-- [ ] M4's two operator decisions, then M7's close.
+- [x] 2026-11-13T03:44Z M4's two operator decisions, given in the review of the first build (section 2): the sparkle is accepted (R-14) and the field-of-view cap ratified (R-13). The first build is commit `78ecb01`, made at the operator's word, not pushed.
 - [x] 2026-11-13T01:37Z **M0 done.** T13 registered in section 12 and `plans/README.md`; DI-121 in the ledger; CR-1's lines in the section 8.1 fence and `src/contracts/index.ts` (`contracts:check` PASS, 509 lines present in order, 0 added); the fakes follow; `src/core/cockpit.ts` with its test; `gates.test.ts` pins 14 tasks. `plans:check` 0 problems.
 - [x] 2026-11-13T01:37Z **M1 done.** `src/app/cam.ts` and its wiring (T10's amendment VW). A1: 10,000 fuzzed frames never move the view origin backward, and with a share of 1.5 they do. A2: each camera rests where section 4 says; DEMO draws chase; a forced camera, `renderState`, a warp and a backward travel snap. `npm run check` exit 0 after M0 and M1: 121 files, 2011 passed, 2 skipped; glsl 191 files, 0 hits.
 - [x] 2026-11-13T01:37Z **M2 done.** Props follow the ship plane (T05's amendment VW). A3 passes to the last bit in float32. Looked at 18 stills of the nose camera at 1280 x 720 in three biomes and a 12-frame sequence through a gate in Cyber Canyon: the ship is gone, the gate ring passes around the camera and grows to the frame's edges, shards and spikes pass below and beside, the sun or planet keeps its place, no console error. `speedLines.ts` read in full: the lines are centred on the camera, not the ship, so T06 needs no change.
@@ -229,6 +255,10 @@ One GPU suite at a time. No `npm install`.
 - [x] 2026-11-13T02:15Z **Section 7 run on the final code.** Final code, one chain, nothing under `src/` edited while it ran: `npm run check` exit 0 (123 files, 2043 passed, 2 skipped; glsl 194 files, 0 hits); `plans:check` 0 problems; `contracts:check` PASS; `tests/views` on `gpu` 13 of 13 after the seed-155 row stopped gating chase (below); `tests/visual/ui.spec.ts` 304 passed; `tests/visual/props.spec.ts` 42 passed, 3 skipped (the software rows); `tests/e2e` on `gpu` 64 passed, 9 skipped, as before T13; `tests/art` metrics and motion 21 passed, chase S1far .0604 against .07, the value before T13; `tests/perf/bundle.spec.ts` 245.1 KB of 260. A8 holds: no reference image exists to regenerate, and every chase row passes as it did. A11: in the cockpit idle writes nothing, cruise 19.2 writes a simulated second (limit 24), boost 37.3 (limit 60). A12 after R-13: 0 bad boundary pixels in every camera at ship x -40, 0 and 40 and y 2 and 14. A13, one run on `gpu-timing`: best p95 1.40 ms in chase, 1.20 in the cockpit and 1.20 on the nose. `npm run build` done; the tailnet preview on 5173 serves it (`index-7PYrvooI.js`).
 - [x] 2026-11-13T02:15Z **Looked at, for A9:** a 24-frame sheet of the three camera changes at 50 ms steps (the ship grows as the camera closes, goes at 6 u, the cockpit closes in from the frame's edges with the readouts arriving on it, the nose view follows within a frame, and pulling back the ship returns under a gate that is still passing); a still from each of two clips. Two clips were recorded frame by frame with the scripted pilot, no hits and no console errors, and sent to the operator: the three cameras in Sunset Drive (18.5 s) and first person in Cyber Canyon (15 s). The executor saw stills of them, not the clips playing.
 - [x] 2026-11-13T02:15Z **Status `blocked`, on two operator decisions.** (1) Far-terrain sparkle in Cyber Canyon in first person, about twice the chase camera's (M4): accept and keep it report-only, soften first person's vertical follow, or have T03 damp the far grid for a high camera. (2) Ratify or reverse R-13, the field-of-view cap. Everything else in sections 5 and 7 is done. Open human checks: HC-V1 to HC-V4.
+- [x] 2026-11-13T04:01Z **M8 and M9 done (T05's amendment VW, round 2).** The roof, the pillars and the gloves. A15: `cockpit.test.ts` 22 rows pass, 6 of them new. Looked at: the cockpit at 1280 x 720 in Sunset Drive, Neon City, Cyber Canyon and Olympus (the pillars lean out from the cowl's shoulders and end in the roof; the roof is a dark band with a lined, slightly arched lower edge and a small console with two slats at its centre; the gates, the sun or sphere and the sector banner are below it); at 1680 x 720 (the roof steps down outside the pillars and the side windows show the scene); at 1024 x 768 and 390 x 844 as a desktop window (the roof stays at the top edge and the pillars stretch to it; at 390 x 844 they are long and nearly upright). Enlarged crops of both hands with the wheel turned each way: a cuff where the forearm arrives, outside the grip; the back of the hand with a square pad; four short fingers going past the grip's inner edge; the thumb along the top; the grip showing above and below. Not judged in motion.
+- [x] 2026-11-13T04:01Z **M10 done (T08's amendment LS; T10's e2e rows).** A16: `ui.spec.ts -g "rotate:"` 44 rows pass (33 state rows at three upright sizes, 5 not-gated rows, 6 behaviour rows), and `tests/views/rotate.spec.ts` 4 rows pass on the real build. Six mutations, each restored by bytes with its sha256 checked: the hide rule removed, 10 of 11 state rows fail; the launch hold removed, 1 row fails; the resume hold removed, 1; the park removed, 1; the width line at 700, 2; the gate's pointer events removed, 10 of 11. Looked at: the gate at 390 x 844 on the dev page and on the real build, upright in DEMO and in a parked run, and under reduced motion (a cyan phone outline about 70 px wide with a pink bar at its foot, on its side in two of the captures; ROTATE YOUR PHONE in white with a pink glow; MIDNIGHT VECTOR FLIES IN LANDSCAPE in cyan under it; a dark violet ground; nothing of the game showing), and the title at 844 x 390 after the turn.
+- [x] 2026-11-13T04:01Z **Section 7 run again on the final code (A17).** Final code, one chain, nothing under `src/` edited while it ran: `npm run check` exit 0 (124 files, 2053 passed, 2 skipped; glsl 195 files, 0 hits); `plans:check` and `contracts:check` exit 0; `tests/views` on `gpu` 17 passed and on `gpu-timing` 1 passed; `ui.spec.ts` 348 passed; `props.spec.ts` 42 passed, 3 skipped; `tests/e2e` 64 passed, 9 skipped; art `metrics` and `motion` 21 passed; `npm run build` exit 0 and `bundle.spec.ts` 246.1 KB of 260 (245.1 before). Not run: `tests/forever`, `tests/perf` other than the bundle, `test:software`, and `check:task` for each plan, which the whole-repo check stands in for. A5: 45, 44 and 43 draw calls; rebuilds 1 and links 18 throughout. A12 unchanged: seed 1985 chase 6.0%, cockpit 10.0%, nose 9.6%; seed 155 chase 7.8%, cockpit 15.1%, nose 14.6%. A13: p95 1.30 ms chase, 1.20 cockpit, 1.30 nose. The tailnet preview on 5173 serves the new build.
+- [x] 2026-11-13T04:01Z **Status `done`.** T00, T05, T08 and T10 closed their amendments. Open human checks: HC-V1, HC-V2 (the cockpit), HC-V3. Round 2 is not committed.
 
 ## 10. Surprises and discoveries
 
@@ -246,6 +276,9 @@ One GPU suite at a time. No `npm install`.
 - **One row of `tests/forever` fails for a reason that is not T13's.** `identity.spec.ts`'s control "the same mistake is invisible at world 0" read 5,728 differing bytes (5,557 in the chain). On a clean copy of `4ec588d`, made with `git archive` outside the repository, the same row passed once (0 bytes, mean luma 33.7068) and failed twice with the same 5,728 bytes and mean luma 33.6832 as on this tree. So it depends on where the title's autopilot has left the ship when the page is ready, not on the camera work. The file is T09's and was not edited; the other 41 rows of the suite pass.
 - **At the shipped seed the chase camera itself reads 7.8% on T11's sparkle band,** which `src/app/follow.ts` already records (.078 at 155). T11 gates at seed 1985 only, so `measure.spec.ts` gates its chase row there and prints seed 155.
 - **Chase at boost already reads 11.0% on the same band** and T11 keeps it report-only (`S1farBoost`), because boost overlaps its broken-grid drill. First person at cruise is in that range.
+- **Under the gate, 22 of T08's geometry rows passed while checking nothing.** The first `ui.spec.ts` run with the gate in: 285 passed, 19 failed [O: `g-ui1.log`]. The 19 were rows that tap or read a phone held upright. The 22 rows `geometry: phone-small` and `geometry: phone-portrait` were among the 285: their check lists the `data-mv` boxes in sight, and under the gate there are none. So they were re-pointed at narrow desktop windows (R-21), where the upright layout is still met, and all 22 passed there on the first run with no layout change.
+- **The first glove drawn from the back reached past the wheel's limit.** `wheelReach` read .2368 against `COCKPIT_WHEEL_REACH` .23 [O: `cockpit.test.ts`], at the cuff's outer corner. The cuff was shortened and the hand moved .004 inward; the limit is unchanged, because it is what keeps a hand off the instrument panels at full turn and pull.
+- **One screenshot of the gate over a fullscreen page showed a faint rectangle low on the left** [O: `app-fullscreen-phone-390x844-gate.png`, first capture]. Two later captures of the same row, and four of the gate on the real build, are clean. Not explained. The row taps FULLSCREEN just before the turn, so a control still in its press transition is one candidate [I]; a transition holds `visibility` until it ends.
 
 ## 11. Decision log
 
@@ -266,6 +299,15 @@ R-5 to R-9 are proposed with this draft and stand once the operator approves it.
 | **R-11: the camera is one button in the menu, not a radio group** | Section 10: the card has no height for a row more | 2026-11-13 | T13 executor |
 | **R-12: in first person a pickup shrinks from 9 u and a drone from 3** | Section 10. M2 said one fade over 4 u for all items | 2026-11-13 | T13 executor |
 | **R-13: first person caps the field of view at 66 degrees at 21:9** | Section 9, M4: with the camera at the lane wall the fog bound of section 6.4 failed by a few hundred pixels at 68 degrees and by none at 67. Applied so the tree passes its own gate, and put to the operator to ratify or reverse | 2026-11-13 | T13 executor; awaiting the operator |
+| **R-13, ratified** | The operator, verbatim: "Field-of-view cap, accepted." | 2026-11-13 | Operator |
+| **R-14: far-terrain sparkle in Cyber Canyon in first person is accepted, and first person stays report-only on that metric** | The operator, verbatim: "Sparkle in Cyber Canyon, accept. It was not noticeable in my playthrough." `tests/views/measure.spec.ts` keeps printing it and gates only chase at seed 1985 | 2026-11-13 | Operator |
+| **R-15: the cockpit gets a roof, and the gloves are redrawn from the back** | The operator's review (section 2): the struts joined nothing, and the gloves read as seen from the front | 2026-11-13 | Operator |
+| **R-16: the roof hangs from the stage's top edge, by a rig value, with no new uniform** | The cockpit is laid out from the bottom edge in units of `min(H, W / 1.6)`, so on a stage narrower than 1.6:1 a roof at a fixed height would float in the middle of the sky. The stage's height in units is 2 over the unit the program already has. On a stage of 1.6:1 or wider the shift is exactly 0 | 2026-11-13 | T13 executor, for the operator |
+| **R-17: the roof takes the top 8.5% to 14.5% of a unit-high stage, with a small overhead console** | Enough to read as a roof and to hide the pillars' heads. In stills of Sunset Drive, Neon City, Cyber Canyon and Olympus the gates, the sun or sphere and the sector banner are all below it [O: looked at, 1280 x 720]. The console is what makes it read as an interior rather than a letterbox bar [I] | 2026-11-13 | T13 executor, for the operator |
+| **R-18: a phone is a touch-first screen under 600 CSS px wide, held upright; one media query decides** | 600 is Android's own line between phone and tablet layouts (`sw600dp`) [A: from the executor's memory of the platform, not looked up]. `pointer: coarse` keeps a narrow desktop window out, which the operator did not ask to block, and is what the UI already uses to tell touch from mouse | 2026-11-13 | T13 executor, for the operator |
+| **R-19: the gate is a prompt, not a lock** | The operator described the prompt other games show. A lock (`screen.orientation.lock`) is, as far as the executor recalls and without having checked, granted by Chrome only in fullscreen and not by iOS Safari at all, and nothing here can test it. Offered to the operator as a follow-up: locking to landscape when FULLSCREEN is ticked | 2026-11-13 | T13 executor, for the operator |
+| **R-20: the gate parks a run and holds a launch and a resume** | A run must not fly on unseen, and must not start or resume behind the prompt. Parking is what leaving fullscreen already does (FH-8), through the same command. A pause is let through | 2026-11-13 | T13 executor, for the operator |
+| **R-21: the upright layout stays, and its tests move to narrow desktop windows** | Tablets and narrow desktop windows still use it. Under the gate T08's 22 upright geometry rows passed with nothing left to check (section 10), so they would have gone on passing while testing nothing | 2026-11-13 | T13 executor, for the operator |
 
 ## 12. Contract change requests
 
@@ -312,9 +354,17 @@ Implementers that must follow [O: grep]: `src/app/view.ts`, `src/app/commands.ts
 
 ## 13. Outcomes and retrospective
 
-**Interim, 2026-11-13, status `blocked`.** Against section 1: the three cameras exist and switch by the C key and a menu button, the choice is remembered, and the title keeps chase. The cockpit has its dashboard, wheel and arms, the wheel follows the ship, and the readouts sit on the dashboard's panels. The chase camera's rows all pass as before, the sim is blind to the camera over 1,800 steps, and a camera change costs no rebuild and no program link. Two things wait for the operator (section 9): sparkle in Cyber Canyon in first person, and the field-of-view cap.
+**Final, 2026-11-13, status `done`.** Against section 1: the three cameras exist and switch by the C key and a menu button, the choice is remembered, and the title keeps chase. The cockpit has a dashboard, a roof on pillars, a wheel and the pilot's arms, with the hands seen from the back; the wheel follows the ship, and the readouts sit on the dashboard's panels. The chase camera's rows all pass as before, the sim is blind to the camera over 1,800 steps, and a camera change costs no rebuild and no program link (45, 44 and 43 draw calls). Frame time, one run: p95 1.30 ms chase, 1.20 cockpit, 1.30 nose.
 
-**Not verified:** the cameras in motion, by anyone: the executor viewed stills and frame sheets only. The look of the cockpit, how each view plays, and the move between cameras (HC-V1, HC-V2, HC-V4). Any phone or touch screen (HC-V3): the two phone shapes were emulated in desktop Chromium. Any GPU but one RTX 4070 SUPER; the software rasterizer was not run for T13's specs. `tests/forever`'s timing rows, `tests/perf` other than the bundle size, and `check:task` for each reopened plan, which the whole-repo check stands in for. A13 is one run.
+**Round 2, from the operator's review of the first build.** The operator accepted the Cyber Canyon sparkle (R-14) and ratified the field-of-view cap (R-13), passed the nose camera and the move between cameras, and reported the struts and the gloves, which M8 and M9 repaired. M10 added what the review asked for beyond the cameras: a phone held upright shows a rotate gate and plays nothing. The first build is commit `78ecb01`; round 2 is not committed at the time of writing.
+
+**Gaps.** First person in Cyber Canyon sparkles about twice as much as chase on the far band, by the operator's acceptance. The gate is a prompt and not a lock: a phone with its rotation locked shows the prompt until the owner unlocks it, and a lock in fullscreen was offered and not built (R-19). The public README does not yet list the C key or say that phones play sideways; that is T12's file and nobody has asked for it.
+
+**Lessons.** A gate that hides the UI makes layout rows pass by leaving them nothing to check: 22 did (section 10). Negative controls on the gate's own rows were what showed the new rows could fail. Nothing under `src/` may change while a browser suite runs on the dev server.
+
+**Not verified:** the cameras in motion by the executor, who viewed stills and frame sheets only, and recorded a clip without watching it. The repaired cockpit's look and how it plays (HC-V1, HC-V2). Any real phone or touch screen (HC-V3): every phone here is desktop Chromium with touch emulation and a resized viewport, so the gate on Android Chrome and iOS Safari, a real rotation, a locked rotation and the address bar's effect on the width are all unseen. Any GPU but one RTX 4070 SUPER; the software rasterizer was not run for T13's specs. `tests/forever`, `tests/perf` other than the bundle size, and `check:task` for each reopened plan, which the whole-repo check stands in for. A13 is one run. One faint rectangle in one screenshot (section 10) is unexplained.
+
+**Open human checks:** HC-V1 (the cockpit with its roof and new gloves), HC-V2 (playing the cockpit), HC-V3 (a real phone: sideways play, the gate upright, a locked rotation). HC-V4 and the nose camera's part of HC-V2 are passed.
 
 ## 14. Revision notes
 
@@ -323,3 +373,5 @@ Implementers that must follow [O: grep]: `src/app/view.ts`, `src/app/commands.ts
 - 2026-11-13T01:37Z M0 to M3, M5 and M6 done; M4 measured. Section 5's M5 (a 3D mesh under its own projection) and M3 (a radio group) are superseded by R-10 and R-11, and M2's single near fade by R-12. Sections 9, 10 and 11 updated.
 - 2026-11-13T01:47Z R-13 recorded: first person's field-of-view cap, applied ahead of the operator's word and flagged as such.
 - 2026-11-13T02:15Z Section 7 run; status `blocked` on the two decisions of M4. T00, T05, T08 and T10 closed their amendments.
+- 2026-11-13T03:45Z Round 2: the operator's review of the first build recorded in section 2; M8 to M11 added to section 5, A15 to A17 to section 7, the human checks updated; R-13 ratified and R-14 to R-21 recorded; status `in-progress`.
+- 2026-11-13T04:01Z Round 2 closed: M8 to M11 done, section 13 rewritten as final, status `done`.

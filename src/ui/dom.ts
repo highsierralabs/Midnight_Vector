@@ -53,6 +53,9 @@ export interface UiDom {
 
   readonly live: Text;
 
+  /** Amendment LS: the rotate gate. ui.css shows it by the root's data-rotate. */
+  readonly rotate: HTMLElement;
+
   readonly cruise: HTMLElement;
   readonly resume: HTMLButtonElement;
   readonly music: HTMLInputElement;
@@ -233,6 +236,13 @@ export function buildDom(doc: Document, root: HTMLElement): UiDom {
 
   const autoTag = h(doc, 'div', { class: 'mv-auto', 'data-mv': 'autopilot' }, copy.AUTOPILOT_TAG);
 
+  // Amendment LS: the rotate gate, last in the tree and above the rest. A phone drawn in lines, which turns onto its
+  // side, and two lines of text. An alert, so a screen reader says it when it appears.
+  const rotate = h(doc, 'div', { class: 'mv-rotate', 'data-mv': 'rotate', role: 'alert' },
+    h(doc, 'div', { class: 'mv-rotate-icon', 'aria-hidden': 'true' }, h(doc, 'div', { class: 'mv-rotate-phone' })),
+    h(doc, 'p', { class: 'mv-rotate-head', 'data-mv': 'rotate-head' }, copy.ROTATE_HEAD),
+    h(doc, 'p', { class: 'mv-rotate-sub' }, copy.ROTATE_SUB));
+
   root.append(
     title,
     hud,
@@ -246,11 +256,12 @@ export function buildDom(doc: Document, root: HTMLElement): UiDom {
       h(doc, 'div', { class: 'mv-ctx-text' }, copy.CONTEXT_LOST)),
     cruise,
     h(doc, 'div', { class: 'mv-live', 'data-mv': 'live', role: 'status', 'aria-live': 'polite' }, live),
+    rotate,
   );
 
   return {
     root, title, launch, launchNoHud, best, hud, score, scoreEl, sync, syncEl, shields, overdrive, overdriveFill, km, sector, objective,
-    menuButton, boostButton, popups, popupText, banner, bannerTitle, bannerObjective, bannerGrade, autoTag, live,
+    menuButton, boostButton, popups, popupText, banner, bannerTitle, bannerObjective, bannerGrade, autoTag, live, rotate,
     cruise, resume, music: music.range, sfx: sfx.range, mute: mute.box, quality, cam, camName, autoLabel,
     fullscreen: fullscreen.box, fullscreenRow: fullscreen.row, hideHud: hideHud.box, reduced: reduced.box,
     runScore, runKm, bestScore, bestKm,

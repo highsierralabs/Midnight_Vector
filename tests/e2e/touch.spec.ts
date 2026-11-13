@@ -6,7 +6,8 @@ import { nodeWait, openApp } from './lib/app';
 
 test.beforeEach(({}, info) => { test.skip(info.project.name !== 'gpu', 'gpu only'); });
 
-const PHONE = { viewport: { width: 390, height: 844 }, hasTouch: true, isMobile: true } as const;
+// Amendment LS: a phone held upright shows the rotate gate (tests/views/rotate.spec.ts), so this phone is held sideways.
+const PHONE = { viewport: { width: 844, height: 390 }, hasTouch: true, isMobile: true } as const;
 
 type Pt = { x: number; y: number; id: number };
 async function touch(cdp: CDPSession, type: 'touchStart' | 'touchMove' | 'touchEnd', pts: Pt[]): Promise<void> {
@@ -41,12 +42,12 @@ test('drag launches on release, steers by sign, a second finger boosts, no scrol
   const ctx = await browser.newContext(PHONE);
   const page = await ctx.newPage();
   await openApp(page);
-  await saveShot(page, info, 'touch-title-390x844');
+  await saveShot(page, info, 'touch-title-844x390');
   const cdp = await ctx.newCDPSession(page);
   // B17 (VI-gates): the launch comes on the release, not the press. With the finger still down after the press and all
   // ten moves, and 100 ms more, so T08's attribute has caught up with any launch, both reads must still be DEMO.
   let held: { sim: number; attr: string | null } | null = null;
-  await drag(cdp, { x: 195, y: 600 }, 40, 10, async () => {
+  await drag(cdp, { x: 195, y: 200 }, 40, 10, async () => {
     await nodeWait(100);
     held = await modes(page);
   });
@@ -57,19 +58,19 @@ test('drag launches on release, steers by sign, a second finger boosts, no scrol
   expect(released).toEqual({ sim: 1, attr: 'play' });
   await nodeWait(1500);
   const a = await sim(page);
-  await drag(cdp, { x: 120, y: 600 }, 160, 16);
+  await drag(cdp, { x: 120, y: 200 }, 160, 16);
   await nodeWait(800);
   const b = await sim(page);
-  await drag(cdp, { x: 300, y: 600 }, -220, 16);
+  await drag(cdp, { x: 300, y: 200 }, -220, 16);
   await nodeWait(900);
   const c = await sim(page);
   // Two fingers: the second press boosts while both are down.
-  await touch(cdp, 'touchStart', [{ x: 150, y: 620, id: 1 }]);
-  await touch(cdp, 'touchStart', [{ x: 150, y: 620, id: 1 }, { x: 260, y: 620, id: 2 }]);
+  await touch(cdp, 'touchStart', [{ x: 150, y: 220, id: 1 }]);
+  await touch(cdp, 'touchStart', [{ x: 150, y: 220, id: 1 }, { x: 260, y: 220, id: 2 }]);
   const od0 = (await sim(page)).overdrive;
   await nodeWait(1200);
   const d = await sim(page);
-  await saveShot(page, info, 'touch-play-boost-390x844');
+  await saveShot(page, info, 'touch-play-boost-844x390');
   await touch(cdp, 'touchEnd', []);
   console.log(`A21 ${JSON.stringify({ a, b, c, od0, d })}`);
   expect(b.x).toBeGreaterThan(a.x + 2);
@@ -87,7 +88,7 @@ test('OS reduced motion at load: 0.6x speed from the first frame, reducedMotion 
   await openApp(page);
   const boot = await page.evaluate(() => ({ speed: window.__mvE2e!.sim.speed, reduced: document.querySelector('.mv-ui')!.getAttribute('data-reduced') }));
   const cdp = await ctx.newCDPSession(page);
-  await drag(cdp, { x: 195, y: 600 }, 30);
+  await drag(cdp, { x: 195, y: 200 }, 30);
   await expect(page.locator('html')).toHaveAttribute('data-mv-mode', 'play');
   const rolls = await page.evaluate(async () => {
     const cam = window.__mvE2e!.host.ctx.camera;
@@ -100,9 +101,9 @@ test('OS reduced motion at load: 0.6x speed from the first frame, reducedMotion 
     return { maxAbs: Math.max(...out.map(Math.abs)), n: out.length };
   });
   // Steer during the roll window too, from Node, so feel has reason to roll.
-  await drag(cdp, { x: 100, y: 600 }, 200, 20);
+  await drag(cdp, { x: 100, y: 200 }, 200, 20);
   const after = await sim(page);
-  await saveShot(page, info, 'touch-reduced-play-390x844');
+  await saveShot(page, info, 'touch-reduced-play-844x390');
   console.log(`A21 reduced ${JSON.stringify({ boot, rolls, after })}`);
   expect(boot.speed).toBeLessThanOrEqual(0.6 * 80 + 0.5);
   expect(boot.reduced).toBe('1');

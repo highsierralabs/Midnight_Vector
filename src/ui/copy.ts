@@ -36,6 +36,10 @@ export const SIGNAL_LOST_SUB = 'REACQUIRING - SCORE KEPT';
 export const CONTEXT_LOST = 'VIDEO SIGNAL INTERRUPTED - THE ROAD IS STILL MOVING';
 export const CONTEXT_RESTORED = 'VIDEO SIGNAL RESTORED';
 
+/** Amendment LS: the rotate gate, shown on a phone held upright. */
+export const ROTATE_HEAD = 'ROTATE YOUR PHONE';
+export const ROTATE_SUB = 'MIDNIGHT VECTOR FLIES IN LANDSCAPE';
+
 export const CRUISE_HEADING = 'CRUISE';
 export const RESUME = 'RESUME';
 export const LABEL_MUSIC = 'MUSIC';

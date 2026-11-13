@@ -13,6 +13,7 @@ import { createMenu, type Menu } from './menu';
 import { createOverlays, type Overlays } from './overlays';
 import { createPaletteWriter, type PaletteWriter } from './palette';
 import { createPopups, type Popups } from './popups';
+import { ROTATE_QUERY, gateHolds, gateParks } from './rotate';
 import { createRunMeter } from './run';
 import { createAttrSlot, createGate, type Gate, type Slot } from './slots';
 import { CAM_NAMES, createBestsTracker, loadSettings, type BestsTracker, type StoreLike } from './storage';
@@ -131,6 +132,9 @@ export const createUi: CreateUi = () => {
   const runMeter = createRunMeter();
   const run = new Float64Array(1);
   const leave: Leave = { pending: false, wasIn: false, isIn: false, own: false };
+  /** Amendment LS: the rotate gate shows, and it came up since the last frame, which parks a run once. */
+  let gated = false;
+  let gatePending = false;
 
   function mount(root: HTMLElement, cmd: UiCommands): void {
     if (parts || fatal) return;
@@ -147,6 +151,11 @@ export const createUi: CreateUi = () => {
     // T13: the camera the frame was drawn with, and whether the readouts sit on the cockpit's dashboard.
     root.setAttribute('data-cam', CAM_NAMES[CamMode.CHASE]);
     root.setAttribute('data-dash', '0');
+    // Amendment LS: a phone held upright gets the rotate gate. Read before the tree is built, so no frame shows the title
+    // first, and again on every change of the one query (rotate.ts), never per frame.
+    const rotateQuery = window.matchMedia(ROTATE_QUERY);
+    gated = rotateQuery.matches;
+    root.setAttribute('data-rotate', gated ? '1' : '0');
     // T13: where the dashboard is, for ui.css. Each slot's corner and size in cockpit units, written once, and one cockpit
     // unit in CSS pixels, kept by a resize observer and never written per frame. The props layer scales the dashboard it
     // draws by the same unit of the same stage, so a readout lands on its panel.
@@ -182,11 +191,15 @@ export const createUi: CreateUi = () => {
       // DI-95: a press while the app still loads would start the run and its audio under a title that stays drawn. The
       // attribute is read in the handler, which reads no layout; ui.css shows LOADING from the same attribute.
       if (lastMode !== SimMode.DEMO || fatal || !bootReady(document.documentElement.getAttribute('data-mv-boot'))) return;
+      // Amendment LS: nothing starts under the rotate gate. The gate takes every touch, and this stops a key as well.
+      if (gateHolds(gated, lastMode)) return;
       // Before the launch, so the run's first PLAY frame already has the chosen HUD.
       if (hideHud !== null) menu.chooseHud(hideHud);
       cmd.launch();
     }
     function tryToggle(): void {
+      // Amendment LS: under the rotate gate a pause goes through and a resume waits.
+      if (gateHolds(gated, lastMode)) return;
       if (!fatal && (lastMode === SimMode.PLAY || lastMode === SimMode.CRUISE)) cmd.togglePause();
     }
 
@@ -266,6 +279,14 @@ export const createUi: CreateUi = () => {
     // LH-4: the start button that matches the remembered choice, so a key alone repeats it.
     const start = settings.hideHud ? dom.launchNoHud : dom.launch;
     start.focus(coarse ? { preventScroll: true, focusVisible: false } : { preventScroll: true });
+
+    rotateQuery.addEventListener('change', (e) => {
+      gated = e.matches;
+      gatePending = gated;
+      root.setAttribute('data-rotate', gated ? '1' : '0');
+      // Turned back on the title, the start button takes the focus it could not hold while hidden.
+      if (!gated && !fatal && lastMode === SimMode.DEMO) start.focus({ preventScroll: true, focusVisible: false });
+    });
   }
 
   function frame(v: Readonly<FrameView>): void {
@@ -281,6 +302,12 @@ export const createUi: CreateUi = () => {
     if (leave.pending) {
       leave.pending = false;
       if (leaveOpensCruise(leave.wasIn, leave.isIn, leave.own, s.mode)) p.cmd.togglePause();
+    }
+
+    // Amendment LS: the rotate gate parks a run it finds in PLAY, once, and before the mode is read, for FH-36's reason.
+    if (gatePending) {
+      gatePending = false;
+      if (gateParks(gated, s.mode)) p.cmd.togglePause();
     }
 
     const mode = s.mode;

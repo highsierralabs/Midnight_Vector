@@ -59,8 +59,9 @@ test('key a launches with a running context (A20)', async ({ page }) => {
   expect(after[0]).toBe('log AUDIOREC new AudioContext running');
 });
 
+// Amendment LS: a phone held upright shows the rotate gate (tests/views/rotate.spec.ts), so this phone is held sideways.
 async function touchPage(browser: Browser): Promise<{ page: Page; close: () => Promise<void> }> {
-  const ctx = await browser.newContext({ viewport: { width: 390, height: 844 }, hasTouch: true, isMobile: true });
+  const ctx = await browser.newContext({ viewport: { width: 844, height: 390 }, hasTouch: true, isMobile: true });
   const page = await ctx.newPage();
   return { page, close: () => ctx.close() };
 }
@@ -70,7 +71,7 @@ test('touch tap launches with a running context (A20)', async ({ browser }) => {
   const log = await untouched(page);
   const at = log.lines.length;
   assertCleanBeforeGesture(log, at);
-  await page.touchscreen.tap(195, 600);
+  await page.touchscreen.tap(422, 120);
   const after = await afterGesture(log, at);
   console.log(`A20 tap: ${JSON.stringify(after.slice(0, 3))}`);
   expect(after[0]).toBe('log AUDIOREC new AudioContext running');
@@ -84,8 +85,8 @@ test('touch drag with no click launches with a running context (A20)', async ({ 
   assertCleanBeforeGesture(log, at);
   const cdp = await page.context().newCDPSession(page);
   const pt = (x: number, y: number) => [{ x, y, id: 1 }];
-  await cdp.send('Input.dispatchTouchEvent', { type: 'touchStart', touchPoints: pt(150, 600) });
-  for (let i = 1; i <= 8; i++) await cdp.send('Input.dispatchTouchEvent', { type: 'touchMove', touchPoints: pt(150 + i * 10, 600) });
+  await cdp.send('Input.dispatchTouchEvent', { type: 'touchStart', touchPoints: pt(150, 200) });
+  for (let i = 1; i <= 8; i++) await cdp.send('Input.dispatchTouchEvent', { type: 'touchMove', touchPoints: pt(150 + i * 10, 200) });
   await cdp.send('Input.dispatchTouchEvent', { type: 'touchEnd', touchPoints: [] });
   const after = await afterGesture(log, at);
   console.log(`A20 drag: ${JSON.stringify(after.slice(0, 3))}`);

@@ -1,11 +1,13 @@
-// The cockpit (T13, plans/T13-views.md): the dashboard, its two instrument panels, the canopy struts, the wheel and the
-// pilot's hands and forearms, as one mesh, and the wheel's pure pose. No three.
+// The cockpit (T13, plans/T13-views.md): the dashboard, its two instrument panels, the canopy's pillars and roof, the wheel
+// and the pilot's hands and forearms, as one mesh, and the wheel's pure pose. No three.
 //
 // The eye is fixed in the cockpit, so the mesh is flat: every vertex is a point of the stage in cockpit units
 // (src/core/cockpit.ts: x from the centre, y from the bottom edge, z 0), and the triangles are in painter's order, back to
 // front. The vertex program (glsl/cockpit.vert.glsl) turns the wheel about its hub and scales it about the eye line for a
 // pull or a push, which is what a wheel facing the pilot does in perspective. aTag is (part, rig): rig 1 moves with the
-// wheel, 0 stays, and a forearm's two ends differ, so it stretches between a fixed elbow and the moving wrist.
+// wheel, 0 stays, and a forearm's two ends differ, so it stretches between a fixed elbow and the moving wrist. rig
+// COCKPIT_RIG_TOP hangs a vertex from the stage's top edge instead of standing it on the bottom one: the roof is drawn for
+// a stage one unit high, and on a taller one it rides up with the top edge and the pillars stretch to it.
 import {
   COCKPIT_DASH_TOP, COCKPIT_EYE_Y, COCKPIT_HUB, COCKPIT_PANELS, COCKPIT_SLOTS, COCKPIT_WHEEL_PULL, COCKPIT_WHEEL_TURN,
   type CockpitRect,
@@ -19,7 +21,9 @@ export const COCKPIT_ZOOM = 1.6;
 export const COCKPIT_EDGE_W = 0.004;
 
 /** part ids, read by glsl/cockpit.frag.glsl. */
-export const CockpitPart = { DASH: 0, GLASS: 1, TRIM: 2, WHEEL: 3, GLOVE: 4, SLEEVE: 5, STRUT: 6 } as const;
+export const CockpitPart = { DASH: 0, GLASS: 1, TRIM: 2, WHEEL: 3, GLOVE: 4, SLEEVE: 5, STRUT: 6, ROOF: 7 } as const;
+/** The rig value of a vertex that hangs from the stage's top edge. Read by glsl/cockpit.vert.glsl as anything over 1.5. */
+export const COCKPIT_RIG_TOP = 2;
 
 /** The dashboard runs this far to each side, past any stage up to 4.8:1. */
 const DASH_HALF = 2.4;
@@ -33,12 +37,34 @@ export const DASH_PROFILE: readonly (readonly [number, number])[] = [
   [-DASH_HALF, SILL_Y], [-0.88, SILL_Y], [-0.82, COCKPIT_DASH_TOP], [-0.25, COCKPIT_DASH_TOP], [-0.19, DIP_Y],
   [0.19, DIP_Y], [0.25, COCKPIT_DASH_TOP], [0.82, COCKPIT_DASH_TOP], [0.88, SILL_Y], [DASH_HALF, SILL_Y],
 ];
+/** The roof's lower edge, left to right, for a stage one unit high. Symmetric about x = 0. It arches a little over the windscreen. */
+export const ROOF_PROFILE: readonly (readonly [number, number])[] = [
+  [-DASH_HALF, 0.855], [-0.87, 0.855], [-0.81, 0.893], [-0.22, 0.915], [0.22, 0.915], [0.81, 0.893], [0.87, 0.855], [DASH_HALF, 0.855],
+];
+/** Above the stage's top edge, so the roof has no upper edge in frame. */
+const ABOVE = 1.08;
 /** The cowl's second line sits this far under the top edge. */
 const LIP = 0.016;
 /** A bezel stands this far outside its panel's glass. */
 const BEZEL = 0.012;
 const HUB_X = COCKPIT_HUB.x;
 const HUB_Y = COCKPIT_HUB.y;
+
+/**
+ * The right hand's own frame, for the gloves: its origin is the middle of the back of the hand, s runs from the wrist to
+ * the knuckles, which is inward and a little up, across the grip, and t runs from the thumb's side to the little finger's.
+ * (s, t) is right-handed, so a face given counter-clockwise in it stays counter-clockwise. The left hand is the mirror.
+ */
+const HAND_O: readonly [number, number] = [0.166, HUB_Y + 0.026];
+const HAND_S: readonly [number, number] = [-0.92, 0.39];
+const HAND_T: readonly [number, number] = [-0.39, -0.92];
+/** The knuckles' line, half the hand's width there, and how far each finger's first joint shows beyond it, forefinger first. */
+const KNUCKLE_S = 0.022;
+const HAND_HALF = 0.036;
+const FINGER_LEN: readonly number[] = [0.019, 0.022, 0.02, 0.016];
+const hp = (s: number, t: number): readonly [number, number] => [
+  HAND_O[0] + s * HAND_S[0] + t * HAND_T[0], HAND_O[1] + s * HAND_S[1] + t * HAND_T[1],
+];
 
 const p = (x: number, y: number): V3 => [x, y, 0];
 
@@ -68,15 +94,36 @@ function rect(b: MeshBuilder, r: CockpitRect, grow: number, o: FaceOpts): void {
 }
 
 /**
- * The cockpit mesh. Edge bits: 1 ab, 2 bc, 4 cd, 8 da. Order is back to front: struts, dashboard, cowl, vents, panels,
- * console and column, wheel, forearms, gloves.
+ * The cockpit mesh. Edge bits: 1 ab, 2 bc, 4 cd, 8 da. Order is back to front: pillars, roof, dashboard, cowl, vents,
+ * panels, console and column, wheel, forearms, gloves.
  */
 export function buildCockpit(): BuiltMesh {
   const b = new MeshBuilder();
   const P = CockpitPart;
 
-  // Canopy struts, behind the dashboard: two thin bars leaning outward, long enough to leave any stage through its side or top.
-  pair(b, [[0.652, COCKPIT_DASH_TOP - 0.02], [0.672, COCKPIT_DASH_TOP - 0.02], [2.012, 4], [1.992, 4]], { part: P.STRUT, edges: 10 });
+  // The canopy's pillars, behind the dashboard and the roof: a windscreen pillar a side, leaning outward from the cowl's
+  // shoulder to the roof, and a second one behind it that only a stage wider than 21:9 shows. Each foot stands on the
+  // bottom edge's units and each head hangs from the top edge's, so a pillar always joins the two.
+  const TOP = COCKPIT_RIG_TOP;
+  pair(b, [[0.652, COCKPIT_DASH_TOP - 0.02], [0.678, COCKPIT_DASH_TOP - 0.02], [0.806, 0.905], [0.78, 0.905]], { part: P.STRUT, edges: 10, param: [0, 0, TOP, TOP] });
+  pair(b, [[1.3, SILL_Y - 0.02], [1.33, SILL_Y - 0.02], [1.41, 0.87], [1.38, 0.87]], { part: P.STRUT, edges: 10, param: [0, 0, TOP, TOP] });
+
+  // The roof: one quad over each stretch of its lower edge, lined along that edge only, then a second line over the edge,
+  // as the cowl has, and a small overhead console with two slats at the centre.
+  for (let i = 0; i + 1 < ROOF_PROFILE.length; i++) {
+    const [x0, y0] = ROOF_PROFILE[i]!;
+    const [x1, y1] = ROOF_PROFILE[i + 1]!;
+    quad(b, [[x0, y0], [x1, y1], [x1, ABOVE], [x0, ABOVE]], { part: P.ROOF, edges: 1, param: TOP });
+  }
+  for (let i = 0; i + 1 < ROOF_PROFILE.length; i++) {
+    const [x0, y0] = ROOF_PROFILE[i]!;
+    const [x1, y1] = ROOF_PROFILE[i + 1]!;
+    quad(b, [[x0, y0], [x1, y1], [x1, y1 + LIP], [x0, y0 + LIP]], { part: P.TRIM, edges: 4, param: TOP });
+  }
+  quad(b, [[-0.105, 0.872], [0.105, 0.872], [0.15, 0.925], [-0.15, 0.925]], { part: P.TRIM, edges: 11, param: TOP });
+  for (const y of [0.884, 0.9]) {
+    quad(b, [[-0.07, y], [0.07, y], [0.07, y + 0.008], [-0.07, y + 0.008]], { part: P.TRIM, edges: 15, param: TOP });
+  }
 
   // The dashboard, one quad under each stretch of its top edge, lined along that edge only.
   for (let i = 0; i + 1 < DASH_PROFILE.length; i++) {
@@ -120,23 +167,24 @@ export function buildCockpit(): BuiltMesh {
   }
 
   // Forearms: the elbow end stays, below and outside the frame, and the wrist end moves with the wheel.
-  pair(b, [[0.36, -0.1], [0.5, -0.06], [0.196, HUB_Y + 0.006], [0.126, HUB_Y + 0.01]], { part: P.SLEEVE, edges: 10, param: [0, 0, 1, 1] });
+  pair(b, [[0.36, -0.1], [0.5, -0.06], hp(-0.046, -0.029), hp(-0.046, 0.029)], { part: P.SLEEVE, edges: 10, param: [0, 0, 1, 1] });
 
-  // Gloves, each four fingers wrapped round its grip, with a thumb on the inside and a cuff at the wrist. rig 1.
+  // Gloves, seen as the pilot sees them: the back of each hand, laid across its grip, with the fingers going away round the
+  // grip's inner side. A cuff at the wrist, the back of the hand with a pad on it, four knuckles and the first joint of each
+  // finger beyond them, and the thumb along the top. rig 1. Each face is given in the hand's own frame (hp).
   const glove: FaceOpts = { part: P.GLOVE, param: 1 };
-  pair(b, [[0.124, HUB_Y - 0.004], [0.198, HUB_Y - 0.008], [0.196, HUB_Y + 0.008], [0.126, HUB_Y + 0.012]], { ...glove, edges: 11 });
+  pair(b, [hp(-0.05, -0.034), hp(-0.034, -0.034), hp(-0.034, 0.034), hp(-0.05, 0.034)], { ...glove, edges: 15 });
+  pair(b, [hp(-0.034, -0.03), hp(KNUCKLE_S, -HAND_HALF), hp(KNUCKLE_S, HAND_HALF), hp(-0.034, 0.03)], { ...glove, edges: 10 });
+  pair(b, [hp(-0.024, -0.014), hp(0.008, -0.02), hp(0.008, 0.02), hp(-0.024, 0.014)], { ...glove, edges: 15 });
   const fingers = 4;
+  const width = (2 * HAND_HALF) / fingers;
   for (let i = 0; i < fingers; i++) {
-    const t0 = i / fingers;
-    const t1 = (i + 1) / fingers;
-    const at = (t: number): [readonly [number, number], readonly [number, number]] => [
-      [0.126 + 0.006 * t, HUB_Y + 0.012 + 0.06 * t], [0.196 + 0.008 * t, HUB_Y + 0.008 + 0.058 * t],
-    ];
-    const [l0, r0] = at(t0);
-    const [l1, r1] = at(t1);
-    pair(b, [l0, r0, r1, l1], { ...glove, edges: 14 });
+    const t0 = -HAND_HALF + i * width;
+    const t1 = t0 + width;
+    const tip = KNUCKLE_S + FINGER_LEN[i]!;
+    pair(b, [hp(KNUCKLE_S, t0), hp(tip, t0 + 0.002), hp(tip, t1 - 0.002), hp(KNUCKLE_S, t1)], { ...glove, edges: 15 });
   }
-  pair(b, [[0.108, HUB_Y + 0.05], [0.127, HUB_Y + 0.028], [0.132, HUB_Y + 0.07], [0.113, HUB_Y + 0.076]], { ...glove, edges: 15 });
+  pair(b, [hp(-0.03, -0.029), hp(-0.016, -0.05), hp(0.03, -0.052), hp(0.02, -0.035)], { ...glove, edges: 15 });
 
   return b.finish();
 }
@@ -186,7 +234,7 @@ export function wheelPoint(x: number, y: number, pose: Readonly<YokePose>, out: 
 export function wheelReach(m: BuiltMesh): number {
   let far = 0;
   for (let i = 0; i < m.tag.length / 2; i++) {
-    if (m.tag[i * 2 + 1]! < 1) continue;
+    if (m.tag[i * 2 + 1] !== 1) continue;
     const d = Math.hypot(m.position[i * 3]! - HUB_X, m.position[i * 3 + 1]! - HUB_Y);
     if (d > far) far = d;
   }

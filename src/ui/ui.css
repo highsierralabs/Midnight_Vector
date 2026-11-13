@@ -985,6 +985,66 @@ html[data-mv-boot]:not([data-mv-boot="running"]) .mv-ui .mv-launch {
   .mv-ui[data-view~="menu"] > .mv-hud { visibility: hidden; }
 }
 
+/* ---- Amendment LS: the rotate gate. A phone held upright does not play. index.ts sets data-rotate from rotate.ts's one
+   media query. The gate then covers the stage and takes every touch, and the rest of the UI is hidden by visibility, which
+   also takes it from the keyboard and from assistive technology; !important, because an animation's own visibility would
+   otherwise win. Under reduced motion the phone is shown already on its side. ---- */
+.mv-rotate { display: none; }
+.mv-ui[data-rotate="1"] > .mv-rotate {
+  position: absolute;
+  inset: 0;
+  z-index: 20;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 1.4em;
+  padding: 2em 1.5em;
+  /* The gate has the whole screen, and a phone's --mv-u is the 11 px floor, so it sets its own size from the width. */
+  font-size: clamp(14px, 4.2vw, 24px);
+  text-align: center;
+  pointer-events: auto;
+  touch-action: none;
+  background: radial-gradient(120% 70% at 50% 42%, #2a0d55 0%, #0d0221 62%);
+}
+.mv-ui[data-rotate="1"] > :not(.mv-rotate) { visibility: hidden !important; }
+.mv-rotate-icon { display: flex; align-items: center; justify-content: center; width: 9em; height: 9em; }
+.mv-rotate-phone {
+  position: relative;
+  width: 4.2em;
+  height: 7.6em;
+  border: .32em solid var(--mv-accent);
+  border-radius: .9em;
+  box-shadow: 0 0 1.4em -.2em var(--mv-accent), inset 0 0 1em -.4em var(--mv-accent);
+  animation: mv-rotate-turn 2.8s cubic-bezier(.5, 0, .3, 1) infinite;
+}
+.mv-rotate-phone::before {
+  content: "";
+  position: absolute;
+  left: 50%;
+  bottom: .45em;
+  width: 1.3em;
+  height: .22em;
+  margin-left: -.65em;
+  border-radius: .2em;
+  background: var(--mv-hot);
+}
+@keyframes mv-rotate-turn {
+  0%, 22% { transform: rotate(0deg); }
+  52%, 86% { transform: rotate(-90deg); }
+  100% { transform: rotate(0deg); }
+}
+.mv-ui[data-reduced="1"] .mv-rotate-phone { transform: rotate(-90deg); }
+.mv-rotate-head {
+  margin: 0;
+  font-family: var(--mv-display);
+  font-size: 1.5em;
+  letter-spacing: .08em;
+  color: #fff;
+  text-shadow: 0 0 .5em var(--mv-hot);
+}
+.mv-rotate-sub { margin: 0; font-size: max(.8em, 12px); letter-spacing: .12em; color: var(--mv-accent); }
+
 /* ---- fatal page: flat gradients and paths only, section 10.1 ---- */
 
 .mv-fatal {

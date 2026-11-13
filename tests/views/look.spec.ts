@@ -13,7 +13,7 @@ const SIZES = [
   { name: '21:9', w: 2520, h: 1080 },
   { name: '4:3', w: 1024, h: 768 },
   { name: 'phone landscape', w: 844, h: 390 },
-  { name: 'phone portrait', w: 390, h: 844 },
+  { name: 'narrow window, upright', w: 390, h: 844 },
 ] as const;
 const CAMS = ['chase', 'cockpit', 'nose'] as const;
 /** A readout may sit this far outside its slot, in CSS px: rounding of the unit and of a text box. */

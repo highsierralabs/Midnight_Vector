@@ -81,11 +81,12 @@ async function centreOf(page: Page, selector: string): Promise<{ x: number; y: n
 /** DI-99: a touch screen keeps II in PLAY. A real tap on it opens CRUISE, and a tap on Resume returns. */
 test('touch: a tap launches, a tap on the menu button opens CRUISE, a tap on Resume returns (A19, DI-99)', async ({ browser }) => {
   test.setTimeout(60_000);
-  const ctx = await browser.newContext({ viewport: { width: 390, height: 844 }, hasTouch: true, isMobile: true });
+  // Amendment LS: a phone held upright shows the rotate gate (tests/views/rotate.spec.ts), so this phone is held sideways.
+  const ctx = await browser.newContext({ viewport: { width: 844, height: 390 }, hasTouch: true, isMobile: true });
   const page = await ctx.newPage();
   try {
     await openApp(page);
-    await page.touchscreen.tap(195, 600);
+    await page.touchscreen.tap(422, 120);
     await expect(MODE(page)).toHaveAttribute('data-mv-mode', 'play');
     await nodeWait(500);
     const ii = await centreOf(page, '[data-mv="menu-button"]');
