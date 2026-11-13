@@ -21,13 +21,17 @@ Leave it alone and an autopilot flies under the title screen, so the page works 
 
 | Device | Controls |
 |---|---|
-| Keyboard | WASD or arrow keys steer, Space boosts, Esc or P opens the cruise menu, M mutes |
+| Keyboard | WASD or arrow keys steer, Space boosts, Esc or P opens the cruise menu, M mutes, C changes the camera |
 | Mouse | The ship follows the pointer, and the left button boosts |
 | Touch | Drag with one finger to steer. A second finger or the on-screen button boosts, and the II button opens the cruise menu |
 
 Hold to boost, or press boost twice quickly to lock it on.
 
-The cruise menu has the music and effects volumes, mute, quality, fullscreen, hide HUD and reduced motion. It is not a pause: the rules freeze and the hazards turn to ghosts, but the world keeps moving behind it.
+There are three cameras: chase, behind the ship; cockpit, from the pilot's seat, with the readouts on the dashboard; and nose, with nothing of the ship in view. Press C, or the CAMERA button in the cruise menu, to step through them. Your choice is remembered, and the title screen always uses chase.
+
+On a phone the game plays in landscape. Held upright, it asks you to turn the phone, and a run in progress waits in the cruise menu until you do. Tablets play either way up.
+
+The cruise menu has the music and effects volumes, mute, the camera, quality, fullscreen, hide HUD and reduced motion. It is not a pause: the rules freeze and the hazards turn to ghosts, but the world keeps moving behind it.
 
 Your best score and furthest distance are kept in your browser's local storage. Nothing is sent anywhere.
 

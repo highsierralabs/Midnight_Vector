@@ -6,7 +6,7 @@ owner: T12 executor, for the operator
 depends_on: [T10]
 owns: [README.md, LICENSE, THIRD-PARTY-NOTICES.md, CONTRIBUTING.md, docs/screenshots/**, .github/**, plans/T12-release.md]
 reads: [architecture.md, Agents.md, plans/**, package.json, vite.config.ts, src/ui/copy.ts, src/input/keys.ts, src/sim/rules.ts]
-updated: 2026-11-12T21:13Z
+updated: 2026-11-13T04:56Z
 ---
 
 ## 1. Purpose
@@ -112,13 +112,17 @@ Leave it alone and an autopilot flies under the title screen, so the page works 
 
 | Device | Controls |
 |---|---|
-| Keyboard | WASD or arrow keys steer, Space boosts, Esc or P opens the cruise menu, M mutes |
+| Keyboard | WASD or arrow keys steer, Space boosts, Esc or P opens the cruise menu, M mutes, C changes the camera |
 | Mouse | The ship follows the pointer, and the left button boosts |
 | Touch | Drag with one finger to steer. A second finger or the on-screen button boosts, and the II button opens the cruise menu |
 
 Hold to boost, or press boost twice quickly to lock it on.
 
-The cruise menu has the music and effects volumes, mute, quality, fullscreen, hide HUD and reduced motion. It is not a pause: the rules freeze and the hazards turn to ghosts, but the world keeps moving behind it.
+There are three cameras: chase, behind the ship; cockpit, from the pilot's seat, with the readouts on the dashboard; and nose, with nothing of the ship in view. Press C, or the CAMERA button in the cruise menu, to step through them. Your choice is remembered, and the title screen always uses chase.
+
+On a phone the game plays in landscape. Held upright, it asks you to turn the phone, and a run in progress waits in the cruise menu until you do. Tablets play either way up.
+
+The cruise menu has the music and effects volumes, mute, the camera, quality, fullscreen, hide HUD and reduced motion. It is not a pause: the rules freeze and the hazards turn to ghosts, but the world keeps moving behind it.
 
 Your best score and furthest distance are kept in your browser's local storage. Nothing is sent anywhere.
 
@@ -424,6 +428,7 @@ Branch protection is verified by reading it back only. The direct test would be 
 - [x] 2026-11-12T21:13Z Checks before the commit: `npm run plans:check`, `npm run check` and the identifier scan of A6. Their results are in the revision note of this amendment (section 14).
 - The earlier entries that say this plan's edits are not committed were true when written. Those edits were committed as `83f5d11` before this amendment, at the operator's word.
 - After the push: the Pages run for the pushed commit and GitHub's rendered README (a `<video>` element, three image sources, read with and without a token) are checked and reported to the operator in session. This is the first deploy triggered by a push to the public repository. Nothing more is written here unless one of them fails.
+- [x] 2026-11-13T04:56Z **Amendment C (the cameras and landscape play in the README), at the operator's word, verbatim: "Add the C key and the landscape play to the readme."** `README.md`, How to play: the keyboard row gains "C changes the camera"; a paragraph names the three cameras, the C key, the CAMERA button and that the choice is remembered; a paragraph says a phone plays in landscape, asks to be turned when held upright and holds a run in the cruise menu meanwhile, and that tablets play either way up; the cruise menu's list gains the camera. Each sentence is what T13 built and tested (`plans/T13-views.md`). Section 4.1's copy of the text carries the same four changes. Status stays `done`.
 
 ## 10. Surprises and discoveries
 
@@ -510,3 +515,4 @@ None. T12 touches nothing under `src/contracts/**`.
 - 2026-11-12T18:35Z Gate 1 passed: three commits pushed, A7 and A8 pass. Section 9 updated. Stopped at Gate 2. This note and the Progress entries after `086c514` are not committed.
 - 2026-11-12T18:42Z Gate 2 passed and the plan closed: the repository is public, Pages serves the game, the settings are applied and read back, A9 to A12 pass. Sections 9 and 13 written. Status `done`, with HC1 to HC3 open. The edits to this plan since `086c514` are not committed.
 - 2026-11-12T21:13Z **Amendment V:** the README shows a gameplay video, a GitHub attachment, in place of `docs/screenshots/title.png`, which is removed (R-14 to R-17), at the operator's word. Sections 1, 4.1, 4.2, 7, 9, 10, 11 and 13 updated. `npm run plans:check`: `13 plans, 3187 pattern pairs, 0 problems`. `npm run check` exit 0: `119 passed (119)`, `1990 passed | 2 skipped (1992)`, `glsl:check: 189 files scanned, 0 hits`. The identifier scan: 0 lines. Status stays `done`, with HC1 to HC3 open.
+- 2026-11-13T04:56Z **Amendment C:** the README's How to play gains the C key, the three cameras and landscape play on phones, at the operator's word. Section 4.1 and section 9 updated.
