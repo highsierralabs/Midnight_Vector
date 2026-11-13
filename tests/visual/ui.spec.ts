@@ -722,8 +722,8 @@ async function openCounting(page: Page, query: Record<string, string | number>):
 type Scenario = 'idle-play' | 'cruise' | 'boost' | 'adversarial';
 
 /** A synchronous loop at 60 simulated fps. An observer's style records are dropped, because the wrapper counts those writes. */
-async function countWrites(page: Page, scenario: Scenario): Promise<WriteCount> {
-  return page.evaluate(({ scenario, PLAY, SHARD, GATE, GRAZE, HIT, GATE_MISS, GRADE }) => {
+async function countWrites(page: Page, scenario: Scenario, cockpit = false): Promise<WriteCount> {
+  return page.evaluate(({ scenario, cockpit, PLAY, SHARD, GATE, GRAZE, HIT, GATE_MISS, GRADE }) => {
     const dev = window.__ui!;
     dev.state('play');
     const w = window as unknown as { __sp: number };
@@ -740,7 +740,9 @@ async function countWrites(page: Page, scenario: Scenario): Promise<WriteCount> 
     let progress = 0;
     const FRAMES = 600;
 
-    const options = (i: number) => {
+    // Amendment VW (T13 A11): the same frames drawn with the cockpit camera, its dashboard fully in.
+    const options = (i: number) => (cockpit ? { ...scene(i), cam: { mode: 1 as never, ahead: 14, cockpitIn: 1 } } : scene(i));
+    const scene = (i: number) => {
       const t = i / 60;
       const tick = Math.floor(t * 120);
       if (scenario === 'idle-play') return { at: ZONE, sim: held };
@@ -798,7 +800,7 @@ async function countWrites(page: Page, scenario: Scenario): Promise<WriteCount> 
     obs.disconnect();
     const writes = records + w.__sp;
     return { records, setProperty: w.__sp, writes, perSimulatedSecond: writes / (FRAMES / 60) };
-  }, { scenario, PLAY: SimMode.PLAY, SHARD: Ev.SHARD, GATE: Ev.GATE, GRAZE: Ev.GRAZE, HIT: Ev.HIT, GATE_MISS: Ev.GATE_MISS, GRADE: Ev.GRADE });
+  }, { scenario, cockpit, PLAY: SimMode.PLAY, SHARD: Ev.SHARD, GATE: Ev.GATE, GRAZE: Ev.GRAZE, HIT: Ev.HIT, GATE_MISS: Ev.GATE_MISS, GRADE: Ev.GRADE });
 }
 
 test.describe('writes:', () => {
@@ -832,6 +834,21 @@ test.describe('writes:', () => {
     console.log(`writes adversarial: ${JSON.stringify(c)}`);
     expect(c.writes).toBeGreaterThan(0);
     expect(c.perSimulatedSecond).toBeLessThanOrEqual(300);
+  });
+
+  // Amendment VW (T13 A11): the readouts on the dashboard cost what they cost at the screen's edges, since only the styles move them.
+  test('T13: in the cockpit view idle writes nothing, cruise stays at or under 24 and boost at or under 60', async ({ page }) => {
+    await openCounting(page, { state: 'play' });
+    const idle = await countWrites(page, 'idle-play', true);
+    await expect(page.locator('.mv-ui')).toHaveAttribute('data-dash', '1');
+    const cruise = await countWrites(page, 'cruise', true);
+    const boost = await countWrites(page, 'boost', true);
+    console.log(`writes in the cockpit: idle ${JSON.stringify(idle)}, cruise ${JSON.stringify(cruise)}, boost ${JSON.stringify(boost)}`);
+    expect([idle.records, idle.setProperty]).toEqual([0, 0]);
+    expect(cruise.writes).toBeGreaterThan(0);
+    expect(cruise.perSimulatedSecond).toBeLessThanOrEqual(24);
+    expect(boost.writes).toBeGreaterThan(0);
+    expect(boost.perSimulatedSecond).toBeLessThanOrEqual(60);
   });
 
   test('control: same-value text writes are recorded, same-value style writes only by the wrapper', async ({ page }) => {
@@ -1759,7 +1776,8 @@ test.describe('a11y:', () => {
     // Tab through everything and wrap, never leaving the dialog.
     const seen: (string | null)[] = [];
     // E2 (amendment FH): FULLSCREEN and HIDE HUD come between the radios and REDUCED MOTION, which is still last.
-    for (let i = 0; i < 8; i++) {
+    // Amendment VW (T13): the camera button follows MUTE, on its row.
+    for (let i = 0; i < 9; i++) {
       await page.keyboard.press('Tab');
       expect(await page.evaluate(() => document.querySelector('[data-mv="cruise"]')!.contains(document.activeElement))).toBe(true);
       seen.push(await active());
@@ -1767,11 +1785,12 @@ test.describe('a11y:', () => {
     expect(seen[0]).toBe('music');
     expect(seen[1]).toBe('sfx');
     expect(seen[2]).toBe('mute-toggle');
-    expect(seen[3]).toBe('INPUT');
-    expect(seen[4]).toBe('fullscreen');
-    expect(seen[5]).toBe('hide-hud');
-    expect(seen[6]).toBe('reduced');
-    expect(seen[7]).toBe('resume');
+    expect(seen[3]).toBe('camera');
+    expect(seen[4]).toBe('INPUT');
+    expect(seen[5]).toBe('fullscreen');
+    expect(seen[6]).toBe('hide-hud');
+    expect(seen[7]).toBe('reduced');
+    expect(seen[8]).toBe('resume');
     await page.keyboard.press('Shift+Tab');
     expect(await active()).toBe('reduced');
     await page.keyboard.press('Tab');
@@ -1786,9 +1805,17 @@ test.describe('a11y:', () => {
     expect(await music.inputValue()).not.toBe(was);
     expect((await callNames(page, 'setVolume')).length).toBe(before + 1);
 
+    // Amendment VW (T13): the camera button by Enter, two stops on from the slider.
+    await page.keyboard.press('Tab');
+    await page.keyboard.press('Tab');
+    await page.keyboard.press('Tab');
+    expect(await active()).toBe('camera');
+    await page.keyboard.press('Enter');
+    const cams = await callNames(page, 'setCamMode');
+    expect(cams[cams.length - 1]!.args).toEqual([1]);
+    await expect(page.locator('[data-mv="camera"]')).toContainText('COCKPIT');
+
     // A radio by arrows.
-    await page.keyboard.press('Tab');
-    await page.keyboard.press('Tab');
     await page.keyboard.press('Tab');
     await page.keyboard.press('ArrowDown');
     const quality = await callNames(page, 'setQuality');
@@ -2608,7 +2635,10 @@ test.describe('storage:', () => {
     await page.locator('[data-mv="reduced"]').check();
     // E3 (amendment FH): HIDE HUD is stored with the others, so this row is also a browser catcher of f12.
     await page.locator('[data-mv="hide-hud"]').check();
-    expect((await stored(page)).settings).toEqual({ music: 0.25, sfx: 0.4, muted: true, quality: 2, reduced: true, hideHud: true });
+    expect((await stored(page)).settings).toEqual({ music: 0.25, sfx: 0.4, muted: true, quality: 2, reduced: true, hideHud: true, cam: 'chase' });
+    // Amendment VW (T13): the camera button steps to the next camera, and the camera is stored by name with the others.
+    await page.locator('[data-mv="camera"]').click();
+    expect((await stored(page)).settings).toEqual({ music: 0.25, sfx: 0.4, muted: true, quality: 2, reduced: true, hideHud: true, cam: 'cockpit' });
 
     await page.evaluate(() => { window.__ui!.state('play'); });
     await risingFrames(page, 0, 12);
@@ -2621,6 +2651,7 @@ test.describe('storage:', () => {
     expect(calls.find((c) => c.name === 'setVolume')!.args).toEqual([0, 0]);
     expect(calls.find((c) => c.name === 'setQuality')!.args).toEqual([2]);
     expect(calls.find((c) => c.name === 'setReducedMotion')!.args).toEqual([true]);
+    expect(calls.find((c) => c.name === 'setCamMode')!.args).toEqual([1]);
     await expect(page.locator('[data-mv="best"]')).toContainText(String(bests.score).padStart(8, '0'));
 
     await page.evaluate(() => { window.__ui!.state('cruise'); });
@@ -2629,6 +2660,8 @@ test.describe('storage:', () => {
     await expect(page.locator('input[value="2"]')).toBeChecked();
     await expect(page.locator('[data-mv="reduced"]')).toBeChecked();
     await expect(page.locator('[data-mv="hide-hud"]')).toBeChecked();
+    await expect(page.locator('[data-mv="camera"]')).toContainText('COCKPIT');
+    await expect(page.locator('[data-mv="camera"]')).toHaveAccessibleName('Camera: cockpit. Press for the next camera.');
   });
 
   test('bests flush on pagehide', async ({ page }) => {
@@ -3175,7 +3208,7 @@ test.describe('fullscreen: desktop', () => {
     await expect(box).toBeVisible();
     await expect(box).not.toBeChecked();
     expect(await page.evaluate(() => document.querySelector('.mv-toggles > label:first-child input')?.getAttribute('data-mv') ?? null)).toBe('fullscreen');
-    expect(await tabCycle(page, 8)).toEqual(['music', 'sfx', 'mute-toggle', 'INPUT', 'fullscreen', 'hide-hud', 'reduced', 'resume']);
+    expect(await tabCycle(page, 9)).toEqual(['music', 'sfx', 'mute-toggle', 'camera', 'INPUT', 'fullscreen', 'hide-hud', 'reduced', 'resume']);
   });
 
   test('(2) a mouse click on its label enters and ticks, a second leaves and unticks, and neither toggles the run', async ({ page }) => {
@@ -3191,7 +3224,7 @@ test.describe('fullscreen: desktop', () => {
   test('(3) Tab to it and Space enters and ticks; Space again leaves and unticks', async ({ page }) => {
     await page.addInitScript(installFsCounter);
     await page.goto(url({ state: 'cruise' }));
-    expect((await tabCycle(page, 5))[4]).toBe('fullscreen');
+    expect((await tabCycle(page, 6))[5]).toBe('fullscreen');
     await fsAction(page, () => page.keyboard.press('Space'));
     expect(await fsRead(page)).toMatchObject({ std: 'HTML', box: true });
     await fsAction(page, () => page.keyboard.press('Space'));
@@ -3271,7 +3304,7 @@ test.describe('fullscreen: desktop', () => {
       });
       expect(label, name).toEqual({ w: 0, h: 0, display: 'none', hidden: true });
       await expect(p.getByRole('checkbox', { name: 'FULLSCREEN' })).toHaveCount(0);
-      expect(await tabCycle(p, 7), name).toEqual(['music', 'sfx', 'mute-toggle', 'INPUT', 'hide-hud', 'reduced', 'resume']);
+      expect(await tabCycle(p, 8), name).toEqual(['music', 'sfx', 'mute-toggle', 'camera', 'INPUT', 'hide-hud', 'reduced', 'resume']);
       if (p !== page) {
         const api = await p.evaluate(() => {
           const d = document as Document & Record<string, unknown>;
@@ -4143,7 +4176,7 @@ for (const v of FH_REVIEW) {
 
       if (v.focus) {
         await page.goto(url({ state: 'cruise' }));
-        expect((await tabCycle(page, 5))[4]).toBe('fullscreen');
+        expect((await tabCycle(page, 6))[5]).toBe('fullscreen');
         await freeze(page);
         await saveCssShot(page, info, `fh-focus-fullscreen-${tag}`);
       }

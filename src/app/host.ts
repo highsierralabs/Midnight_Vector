@@ -37,5 +37,6 @@ export function createHost(app: HostApp): HarnessHost {
     overrideBend(b) { o.bend = b === null ? null : { a: b.a, c: b.c }; },
     overrideFov(deg) { o.fov = deg; },
     overrideFeel(f) { o.feel = f === null ? null : { ...f }; },
+    overrideCam(m) { o.cam = m; },
   };
 }

@@ -1,6 +1,6 @@
 // A9: UiCommands routing per T02's and T08's seams.
 import { describe, expect, it } from 'vitest';
-import { SimMode, type AudioEngine, type Governor, type Tier } from '../../../src/contracts/index';
+import { CamMode, SimMode, type AudioEngine, type Governor, type Tier } from '../../../src/contracts/index';
 import { createCommands } from '../../../src/app/commands';
 import { createFakeSim } from './fixtures/fakes';
 
@@ -25,8 +25,9 @@ function rig() {
   const gov = { profile: null, sample: () => null, force: (t: Tier | 'auto') => { forced.push(t); } } as unknown as Governor;
   let governor: Governor | null = null;
   const view = { reducedMotion: false };
-  const cmd = createCommands({ sim, audio, view, governor: () => governor });
-  return { log, sim, cmd, view, forced, gov, setGovernor: (g: Governor | null) => { governor = g; }, unlocked: () => unlockResolved };
+  const cam: { want: CamMode } = { want: CamMode.CHASE };
+  const cmd = createCommands({ sim, audio, view, cam, governor: () => governor });
+  return { log, sim, cmd, view, cam, forced, gov, setGovernor: (g: Governor | null) => { governor = g; }, unlocked: () => unlockResolved };
 }
 
 describe('createCommands', () => {
@@ -95,5 +96,14 @@ describe('createCommands', () => {
     r.cmd.setQuality('auto');
     expect(r.forced).toEqual([4, 'auto']);
     expect(r.cmd.buffered).toBe('auto');
+  });
+
+  it('T13: setCamMode writes the camera state the loop reads, and nothing else', () => {
+    const r = rig();
+    r.cmd.setCamMode(CamMode.NOSE);
+    expect(r.cam.want).toBe(CamMode.NOSE);
+    r.cmd.setCamMode(CamMode.CHASE);
+    expect(r.cam.want).toBe(CamMode.CHASE);
+    expect(r.log).toEqual([]);
   });
 });

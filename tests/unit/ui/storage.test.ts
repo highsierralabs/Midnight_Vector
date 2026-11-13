@@ -1,5 +1,8 @@
 import { describe, expect, it } from 'vitest';
-import { BESTS_KEY, SETTINGS_KEY, createBestsTracker, defaultSettings, loadBests, loadSettings, saveSettings, shouldRecord, type StoreLike } from '../../../src/ui/storage';
+import { CamMode } from '../../../src/contracts/index';
+import {
+  BESTS_KEY, CAM_NAMES, SETTINGS_KEY, createBestsTracker, defaultSettings, loadBests, loadSettings, nextCam, saveSettings, shouldRecord, type StoreLike,
+} from '../../../src/ui/storage';
 
 function memory(): StoreLike & { data: Map<string, string>; sets: number } {
   const data = new Map<string, string>();
@@ -18,25 +21,26 @@ const throwing: StoreLike = {
 
 describe('settings', () => {
   it('defaults when nothing is stored', () => {
-    expect(loadSettings(memory())).toEqual({ music: 0.8, sfx: 0.8, muted: false, quality: 'auto', reduced: null, hideHud: false });
+    expect(loadSettings(memory())).toEqual({ music: 0.8, sfx: 0.8, muted: false, quality: 'auto', reduced: null, hideHud: false, cam: CamMode.CHASE });
   });
 
   it('round trips', () => {
     const s = memory();
-    const v = { music: 0.25, sfx: 0.5, muted: true, quality: 2 as const, reduced: false, hideHud: true };
+    const v = { music: 0.25, sfx: 0.5, muted: true, quality: 2 as const, reduced: false, hideHud: true, cam: CamMode.NOSE };
     saveSettings(s, v);
     expect(loadSettings(s)).toEqual(v);
-    expect(JSON.parse(s.data.get(SETTINGS_KEY)!)).toEqual(v);
+    // T13: the camera is stored by name.
+    expect(JSON.parse(s.data.get(SETTINGS_KEY)!)).toEqual({ ...v, cam: 'nose' });
   });
 
   // Amendment FH, A28: hideHud is additive, so a store written before FH loads with the HUD shown (FH-15).
   it('U1: the exact pre-FH string loads with hideHud false', () => {
     const s = memory();
     s.data.set(SETTINGS_KEY, '{"music":0.8,"sfx":0.8,"muted":false,"quality":"auto","reduced":null}');
-    expect(loadSettings(s)).toEqual({ music: 0.8, sfx: 0.8, muted: false, quality: 'auto', reduced: null, hideHud: false });
+    expect(loadSettings(s)).toEqual({ music: 0.8, sfx: 0.8, muted: false, quality: 'auto', reduced: null, hideHud: false, cam: CamMode.CHASE });
   });
 
-  it('U2: a non-boolean hideHud loads false, and the saved object has exactly six keys', () => {
+  it('U2: a non-boolean hideHud loads false, and the saved object has exactly seven keys (six before T13)', () => {
     for (const bad of ['"yes"', '1', 'null']) {
       const s = memory();
       s.data.set(SETTINGS_KEY, `{"hideHud":${bad}}`);
@@ -45,8 +49,30 @@ describe('settings', () => {
     const s = memory();
     saveSettings(s, { ...defaultSettings(), hideHud: true });
     const saved = JSON.parse(s.data.get(SETTINGS_KEY)!) as Record<string, unknown>;
-    expect(Object.keys(saved).sort()).toEqual(['hideHud', 'music', 'muted', 'quality', 'reduced', 'sfx']);
+    expect(Object.keys(saved).sort()).toEqual(['cam', 'hideHud', 'music', 'muted', 'quality', 'reduced', 'sfx']);
     expect(saved['hideHud']).toBe(true);
+  });
+
+  // T13 A4: cam is additive, so a store written before T13 loads the chase camera, and so does anything unknown.
+  it('T13: a stored object without cam, or with a bad one, loads chase; each name loads its camera', () => {
+    const s = memory();
+    s.data.set(SETTINGS_KEY, '{"music":0.8,"sfx":0.8,"muted":false,"quality":"auto","reduced":null,"hideHud":false}');
+    expect(loadSettings(s).cam).toBe(CamMode.CHASE);
+    for (const bad of ['"orbit"', '1', 'null', 'true', '["nose"]']) {
+      s.data.set(SETTINGS_KEY, `{"cam":${bad}}`);
+      expect(loadSettings(s).cam, bad).toBe(CamMode.CHASE);
+    }
+    for (const m of [CamMode.CHASE, CamMode.COCKPIT, CamMode.NOSE]) {
+      s.data.set(SETTINGS_KEY, `{"cam":"${CAM_NAMES[m]}"}`);
+      expect(loadSettings(s).cam).toBe(m);
+    }
+    expect(CAM_NAMES).toEqual(['chase', 'cockpit', 'nose']);
+  });
+
+  it('T13: C goes chase, cockpit, nose and round again', () => {
+    expect(nextCam(CamMode.CHASE)).toBe(CamMode.COCKPIT);
+    expect(nextCam(CamMode.COCKPIT)).toBe(CamMode.NOSE);
+    expect(nextCam(CamMode.NOSE)).toBe(CamMode.CHASE);
   });
 
   it('corrupt JSON gives defaults', () => {

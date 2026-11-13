@@ -1,10 +1,12 @@
 // UiCommands routed to live objects (T02's and T08's seams). Pure: no DOM, no clock.
-import { SimMode, type AudioEngine, type Governor, type Sim, type Tier, type UiCommands } from '../contracts/index';
+import { SimMode, type AudioEngine, type CamMode, type Governor, type Sim, type Tier, type UiCommands } from '../contracts/index';
 
 export interface CommandDeps {
   readonly sim: Sim;
   readonly audio: AudioEngine;
   readonly view: { reducedMotion: boolean };
+  /** T13: the camera state; the loop moves the camera toward `want`. */
+  readonly cam: { want: CamMode };
   /** The final governor, or null while boot is still running. */
   governor(): Governor | null;
 }
@@ -40,6 +42,9 @@ export function createCommands(d: CommandDeps): AppCommands {
     setReducedMotion(on) {
       d.sim.setReducedMotion(on);
       d.view.reducedMotion = on;
+    },
+    setCamMode(m) {
+      d.cam.want = m;
     },
   };
 }

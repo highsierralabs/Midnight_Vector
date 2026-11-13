@@ -522,6 +522,84 @@ html[data-mv-boot]:not([data-mv-boot="running"]) .mv-ui .mv-launch {
   .mv-ui[data-hide-hud="1"]:not([data-view~="title"]) > .mv-hud .mv-menu-button:hover { opacity: 1; }
 }
 
+/* ---- T13: the cockpit's dashboard ---- */
+
+/* In the cockpit view the readouts leave the screen's edges for the instrument panels the scene draws. data-dash is 1
+   once the cockpit is fully in. --mv-cu is one cockpit unit, min(height, width / 1.6) of the stage in px (index.ts keeps
+   it), and each slot's corner and size are in those units from the stage's bottom centre (src/core/cockpit.ts), the same
+   numbers the props layer builds the panels from. The scene draws the frames, so the panels' own neon edges go. */
+.mv-ui[data-dash="1"] > .mv-hud { top: 0; bottom: 0; left: 0; right: 0; }
+.mv-ui[data-dash="1"] > .mv-hud > .mv-panel {
+  position: absolute;
+  /* An absolutely placed grid item is laid out in its grid area unless it names none, so the areas go: the stage is the box. */
+  grid-area: auto;
+  box-sizing: border-box;
+  margin: 0;
+  padding: 0 calc(.014 * var(--mv-cu));
+  max-width: none;
+  overflow: hidden;
+  line-height: 1.05;
+  /* .36 s, as the SYNC kick: T08's rule is that nothing in the UI changes faster than .34 s. */
+  animation: mv-dash-in .36s ease-out;
+}
+.mv-ui[data-dash="1"] > .mv-hud > .mv-panel::before { display: none; }
+@keyframes mv-dash-in { from { opacity: 0; } to { opacity: 1; } }
+
+.mv-ui[data-dash="1"] > .mv-hud > .mv-box-score {
+  left: calc(50% + var(--mv-score-x) * var(--mv-cu));
+  bottom: calc(var(--mv-score-y) * var(--mv-cu));
+  width: calc(var(--mv-score-w) * var(--mv-cu));
+  height: calc(var(--mv-score-h) * var(--mv-cu));
+  display: flex;
+  align-items: center;
+  gap: .7em;
+}
+.mv-ui[data-dash="1"] .mv-score { font-size: clamp(12px, calc(.05 * var(--mv-cu)), 3.2em); }
+.mv-ui[data-dash="1"] .mv-score[data-long="1"] { font-size: clamp(11px, calc(.044 * var(--mv-cu)), 2.8em); }
+.mv-ui[data-dash="1"] .mv-syncrow { display: flex; align-items: center; gap: .5em; margin-left: auto; }
+.mv-ui[data-dash="1"] .mv-sync { font-size: clamp(11px, calc(.042 * var(--mv-cu)), 2.4em); }
+
+.mv-ui[data-dash="1"] > .mv-hud > .mv-vitals {
+  left: calc(50% + var(--mv-status-x) * var(--mv-cu));
+  bottom: calc(var(--mv-status-y) * var(--mv-cu));
+  width: calc(var(--mv-status-w) * var(--mv-cu));
+  height: calc(var(--mv-status-h) * var(--mv-cu));
+  font-size: clamp(7px, calc(.017 * var(--mv-cu)), 1.1em);
+  gap: 1em;
+}
+
+.mv-ui[data-dash="1"] > .mv-hud > .mv-box-dist {
+  left: calc(50% + var(--mv-nav-x) * var(--mv-cu));
+  bottom: calc(var(--mv-nav-y) * var(--mv-cu));
+  width: calc(var(--mv-nav-w) * var(--mv-cu));
+  height: calc(var(--mv-nav-h) * var(--mv-cu));
+  align-items: flex-start;
+  justify-content: center;
+  text-align: left;
+  gap: .12em;
+  font-size: clamp(10px, calc(.032 * var(--mv-cu)), 1.5em);
+}
+.mv-ui[data-dash="1"] .mv-km { font-size: 1.5em; }
+.mv-ui[data-dash="1"] .mv-sector, .mv-ui[data-dash="1"] .mv-objective { max-width: 100%; overflow: hidden; text-overflow: ellipsis; }
+
+/* II goes to the top corner, clear of the right-hand panel on a stage as narrow as the design, and BOOST sits over the dashboard. */
+.mv-ui[data-dash="1"] > .mv-hud > .mv-box-menu {
+  position: absolute;
+  grid-area: auto;
+  top: calc(env(safe-area-inset-top, 0px) + var(--mv-gutter));
+  right: calc(env(safe-area-inset-right, 0px) + var(--mv-gutter));
+}
+.mv-ui[data-dash="1"] > .mv-hud > .mv-box-boost {
+  position: absolute;
+  grid-area: auto;
+  right: calc(env(safe-area-inset-right, 0px) + var(--mv-gutter));
+  bottom: calc(.3 * var(--mv-cu) + var(--mv-gutter));
+}
+/* A small dashboard has no room for the instruments' names: under about 500 px of cockpit unit they go, and the values stay. */
+@media (max-height: 500px), (max-width: 800px) {
+  .mv-ui[data-dash="1"] > .mv-hud > .mv-panel .mv-label { display: none; }
+}
+
 /* ---- popups, banner, tag ---- */
 
 .mv-popups {
@@ -855,12 +933,35 @@ html[data-mv-boot]:not([data-mv-boot="running"]) .mv-ui .mv-launch {
 .mv-toggles > .mv-check { white-space: nowrap; }
 /* FH-29: .mv-row's display: flex outranks the browser's own [hidden] rule, so without this a hidden FULLSCREEN still drew. */
 .mv-ui .mv-toggles > [hidden] { display: none; }
+/* T13: MUTE and the camera button share one row, on the radios' own columns and gap, so the card grows by nothing: a
+   row more made it scroll on short landscape phones (371 px in 338), as two toggle rows did [P2]. The button takes two
+   columns, and one where the grid has two, with the short label. */
+.mv-pair { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 0 .7em; align-items: center; }
+.mv-pair > .mv-check { white-space: nowrap; }
+.mv-cam {
+  grid-column: span 2;
+  min-width: 0;
+  min-height: 2.3em;
+  padding: 0 .6em;
+  font-size: .95em;
+  letter-spacing: .08em;
+  white-space: nowrap;
+  color: #fff;
+  background: rgba(45, 226, 230, .12);
+  border: 1px solid var(--mv-accent);
+  text-shadow: var(--mv-halo);
+}
+.mv-ui .mv-cam:hover { background: rgba(45, 226, 230, .28); }
+.mv-cam-short { display: none; }
 @media (max-width: 480px) {
-  .mv-radios, .mv-toggles { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+  .mv-radios, .mv-toggles, .mv-pair { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+  .mv-cam { grid-column: span 1; letter-spacing: 0; padding: 0 .3em; }
+  .mv-cam-long { display: none; }
+  .mv-cam-short { display: inline; }
 }
 
 @media (pointer: coarse) {
-  .mv-row, .mv-radio { min-height: 44px; }
+  .mv-row, .mv-radio, .mv-cam { min-height: 44px; }
   .mv-range { height: 44px; }
 }
 

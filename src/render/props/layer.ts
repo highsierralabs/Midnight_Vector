@@ -1,4 +1,5 @@
-// The props RenderLayer. Every mesh is added in attach and none after: 26 rings, 12 mirrors, 2 beams, 2 ship draws.
+// The props RenderLayer. Every mesh is added in attach and none after: 26 rings, 12 mirrors, 2 beams, 2 ship draws and,
+// since T13, the cockpit's one, which shows only in the cockpit view, where the ship's two do not.
 // Streaming goes through feeder.ts, the tier ramp through density.ts. Nothing in frame() allocates beyond addUpdateRange's one
 // object per range, at chunk rate.
 import { BufferAttribute, BufferGeometry, Group, Mesh, type InstancedBufferAttribute, type ShaderMaterial, type WebGLRenderer } from 'three';
@@ -6,15 +7,20 @@ import {
   Archetype, Ev, ItemKind, ROW_MOD, SHIP_FORWARD, SimMode,
   type LayerName, type QualityProfile, type RenderContext, type RenderLayer, type FrameView,
 } from '../../contracts/index';
+import { COCKPIT_REF_ASPECT } from '../../core/cockpit';
 import { ARCHETYPE_DEFS, Look, Motion, type LookDef, type MeshDef } from './archetypes';
 import { buildUnitBox, MeshBuilder, type BuiltMesh } from './builders';
 import { DensityMachine, ringClamp, ringFilter, ringModulus, type DensityPhase } from './density';
 import { createFeeder, type Feeder } from './feeder';
 import { ITEM_DEFS } from './items';
-import { createLayerUniforms, createShipUniforms, propMaterial, RENDER_ORDER, ringLookUniforms, shipMaterial, type LayerUniforms, type ShipUniforms } from './material';
+import {
+  cockpitMaterial, createCockpitUniforms, type CockpitUniforms,
+  createLayerUniforms, createShipUniforms, propMaterial, RENDER_ORDER, ringLookUniforms, shipMaterial, type LayerUniforms, type ShipUniforms,
+} from './material';
 import { RING_COUNT, RING_PLAN, type RingPlanEntry } from './plan';
 import { RingGpu } from './ringGpu';
-import { buildShipBody, buildShipGlow, createShipPose, SHIP_HALF_LENGTH, shipPose } from './ship';
+import { buildShipBody, buildShipGlow, createShipPlane, createShipPose, SHIP_HALF_LENGTH, shipPlane, shipPose } from './ship';
+import { buildCockpit, createYokePose, yokePose } from './cockpit';
 
 export interface PropsLayerOptions {
   debug?: boolean;          // exposes PropsDebug at layer.debug
@@ -97,6 +103,12 @@ export function createPropsLayer(o: PropsLayerOptions = {}): RenderLayer & { rea
   const density = new DensityMachine();
   const filters = new Float32Array(RING_COUNT).fill(1);
   const pose = createShipPose();
+  const plane = createShipPlane();
+  // T13: the cockpit, one more draw, shown only while the frame says some of it is in.
+  const cockpitU: CockpitUniforms = createCockpitUniforms();
+  const yoke = createYokePose();
+  let cockpit: Mesh | null = null;
+  let cockpitMat: ShaderMaterial | null = null;
   const counts = { fillProps: 0, fillItems: 0, rebuilds: 0, catchUps: 0, refills: 0, hides: 0 };
 
   let ctx: RenderContext | null = null;
@@ -262,6 +274,14 @@ export function createPropsLayer(o: PropsLayerOptions = {}): RenderLayer & { rea
       shipBody.onAfterRender = afterDraw;
       shipGlow.onAfterRender = afterDraw;
       root.add(shipBody, shipGlow);
+      // T13: added here with everything else, hidden, so boot's precompile links its program and a camera change links none.
+      cockpitMat = cockpitMaterial(c.shared, cockpitU);
+      cockpit = new Mesh(makeGeo(buildCockpit()), cockpitMat);
+      cockpit.frustumCulled = false;
+      cockpit.renderOrder = RENDER_ORDER.cockpit;
+      cockpit.visible = false;
+      cockpit.onAfterRender = afterDraw;
+      root.add(cockpit);
       c.scene.add(root);
       // Only if a setQuality came first, which the lifecycle does not do.
       if (sunOnly) applySunOnly();
@@ -366,12 +386,25 @@ export function createPropsLayer(o: PropsLayerOptions = {}): RenderLayer & { rea
       }
       layerU.uGhost.value = ghostValue;
 
+      // T13: where the ship plane is, now that the view origin can sit ahead of the sim's travel. With camAhead 0 these are
+      // the values the uniforms were created with.
+      shipPlane(shipForward, v, plane);
+      layerU.uGateOpen.value = plane.gateOpen;
+      const near = layerU.uNearShrink.value;
+      near[0] = plane.nearLo;
+      near[1] = plane.nearHi;
+      near[2] = plane.droneLo;
+      near[3] = plane.droneHi;
+      const shipShown = shipOn && plane.visible;
+      if (shipBody && shipBody.visible !== shipShown) shipBody.visible = shipShown;
+      if (shipGlow && shipGlow.visible !== shipShown) shipGlow.visible = shipShown;
+
       // The ship, a pure function of sim, feel, alpha and the phases.
       shipPose(v.sim, v.feel, v.alpha, v.phases, pose);
       const shipPos = shipU.uShipPos.value;
       shipPos[0] = pose.x;
       shipPos[1] = pose.y;
-      shipPos[2] = -shipForward;
+      shipPos[2] = -plane.depth;
       const rot = shipU.uShipRot.value;
       rot[0] = pose.bank;
       rot[1] = pose.pitch;
@@ -379,6 +412,27 @@ export function createPropsLayer(o: PropsLayerOptions = {}): RenderLayer & { rea
       eng[0] = pose.engine;
       eng[1] = pose.flicker;
       shipU.uShipBlink.value = pose.blink;
+
+      // T13: the cockpit. Its unit is min(height, width / COCKPIT_REF_ASPECT) of the drawing buffer, which has the stage's
+      // shape, so the UI's readouts, placed by the same rule in CSS pixels, land on the panels. The wheel takes the ship's pose.
+      const cockpitShown = shipOn && v.cockpitIn > 0;
+      if (cockpit && cockpit.visible !== cockpitShown) cockpit.visible = cockpitShown;
+      if (cockpitShown && ctx) {
+        const gl = ctx.renderer.getContext();
+        const w = gl.drawingBufferWidth > 1 ? gl.drawingBufferWidth : 1;
+        const h = gl.drawingBufferHeight > 1 ? gl.drawingBufferHeight : 1;
+        const byWidth = w / COCKPIT_REF_ASPECT;
+        const unit = h < byWidth ? h : byWidth;
+        const cu = cockpitU.uCockpit.value;
+        cu[0] = (2 * unit) / w;
+        cu[1] = (2 * unit) / h;
+        cu[2] = v.cockpitIn;
+        cu[3] = pose.blink;
+        yokePose(pose, yoke);
+        const yk = cockpitU.uYoke.value;
+        yk[0] = yoke.turn;
+        yk[1] = yoke.pull;
+      }
     },
 
     rebuild(v: Readonly<FrameView>): void {
@@ -408,6 +462,9 @@ export function createPropsLayer(o: PropsLayerOptions = {}): RenderLayer & { rea
       rings = [];
       for (const g of shipGeos) g.dispose();
       for (const m of shipMats) m.dispose();
+      cockpitMat?.dispose();
+      cockpitMat = null;
+      cockpit = null;
       ctx?.scene.remove(root);
       ctx = null;
       feeder = null;

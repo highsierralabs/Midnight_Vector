@@ -9,6 +9,8 @@ export interface AppTestHook {
   readonly counters: { frames: number; rendered: number; rebuilds: number; restores: number; resizes: number };
   contextOk(): boolean;
   camera(): { fov: number; aspect: number; gainX: number };
+  /** T13: the player's camera as the last frame drew it. */
+  cam(): { want: number; mode: number; ahead: number; cockpitIn: number; camX: number; camY: number };
   forceSignalLost(): void;
   /** rawDt of the last rAF frame in s; 0 on the first frame after a clock reset. */
   lastRawDt(): number;

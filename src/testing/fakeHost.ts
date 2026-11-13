@@ -18,6 +18,7 @@ import { fakeProfile } from './scriptedFrame';
 export interface FakeHostCalls {
   setManual: boolean[]; runFrame: number[]; renderState: [number, number, number][];
   overrideZone: unknown[]; overrideBend: unknown[]; overrideFov: (number | null)[]; overrideFeel: unknown[];
+  overrideCam: (number | null)[];
   forceVariant: unknown[]; forceMsaa: unknown[]; layerVisible: [LayerName, boolean][]; debugMode: [LayerName, DebugMode][];
   governorForce: (Tier | 'auto')[];
 }
@@ -159,6 +160,7 @@ export function createFakeHost(): FakeHost {
   const calls: FakeHostCalls = {
     setManual: [], runFrame: [], renderState: [],
     overrideZone: [], overrideBend: [], overrideFov: [], overrideFeel: [],
+    overrideCam: [],
     forceVariant: [], forceMsaa: [], layerVisible: [], debugMode: [],
     governorForce: [],
   };
@@ -216,5 +218,6 @@ export function createFakeHost(): FakeHost {
     overrideBend(o: { a: number; c: number } | null): void { calls.overrideBend.push(o); },
     overrideFov(deg: number | null): void { calls.overrideFov.push(deg); },
     overrideFeel(o): void { calls.overrideFeel.push(o); },
+    overrideCam(m): void { calls.overrideCam.push(m); },
   };
 }

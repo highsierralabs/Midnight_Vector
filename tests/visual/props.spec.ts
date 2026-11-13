@@ -662,7 +662,8 @@ test.describe('gpu', () => {
     });
     console.log(`A9 layer calls ${out.calls}, triangles ${out.triangles}, programs ${out.programs} of which the layer ${out.programs - programsWithout}, geometries ${out.before.geometries} -> ${out.after.geometries}, textures ${out.before.textures} -> ${out.after.textures}, counts ${JSON.stringify(out.counts)}`);
     expect(out.calls).toBe(42);
-    expect(out.programs - programsWithout).toBeLessThanOrEqual(6);
+    // Amendment VW (T13): seven since the cockpit, which has a program of its own and is linked at boot with the rest.
+    expect(out.programs - programsWithout).toBeLessThanOrEqual(7);
     expect(out.after.geometries).toBe(out.before.geometries);
     expect(out.after.textures).toBe(out.before.textures);
     expect(out.truncated.every((t) => t === 0)).toBe(true);

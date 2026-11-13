@@ -1,6 +1,6 @@
 // The ship: a low delta with a canopy and twin engines, 3.2 u wide and 4.4 u long, and its pure pose function. No three.
 // Nose toward -z, the direction of travel. Two draws: an opaque body and an additive engine glow.
-import { SPEED_CRUISE, SPEED_MAX, type FeelState, type SimState } from '../../contracts/index';
+import { SHIP_FORWARD, SPEED_CRUISE, SPEED_MAX, type FeelState, type SimState } from '../../contracts/index';
 import { MeshBuilder, type BuiltMesh, type V3 } from './builders';
 import { loft, MASK_UPPER } from './shapes';
 
@@ -8,9 +8,61 @@ export const SHIP_HALF_WIDTH = 1.6;
 export const SHIP_HALF_LENGTH = 2.2;
 const TAU = 2 * Math.PI;
 const BANK_PER_U = 1.6;    // radians of bank per u of lateral motion per step
-const BANK_MAX = 0.55;
+export const BANK_MAX = 0.55;
 const PITCH_PER_U = 2.4;
-const PITCH_MAX = 0.22;
+export const PITCH_MAX = 0.22;
+
+/** T13: the ship's two draws show only while the camera is at least this far behind the ship plane, in u [A]. */
+export const SHIP_SHOW_DEPTH = 6;
+/**
+ * Past the ship plane a pickup or a drone has done its work, and at the camera it would fill the frame, so it shrinks away
+ * between two depths ahead of the camera: 11 and 2 u in chase, where the ship plane is 14 u ahead. In first person the
+ * ship plane is the camera plane (T13), and the two differ [A]. A pickup is flown into, so it shrinks over its last 9 u
+ * and reads as taken in rather than as a wall across the frame. A drone is a hazard, and must be its true size where it
+ * can still hit, so it stays whole until 3 u and only then gets out of the near plane's way.
+ */
+const NEAR_LO = 2;
+const NEAR_HI_BEHIND = 3;
+const SHARD_LO_FIRST = 2.5;
+const SHARD_HI_FIRST = 9;
+const DRONE_LO_FIRST = 1;
+const DRONE_HI_FIRST = 3;
+
+/** What follows from where the ship plane is, in caller-owned storage. */
+export interface ShipPlane {
+  /** The ship plane's depth ahead of the camera plane, in u: SHIP_FORWARD in chase, 0 in the cockpit, negative on the nose. */
+  depth: number;
+  /** uGateOpen: the depth of the ship's tail. A gate nearer than this has been cleared (DI-113). */
+  gateOpen: number;
+  /** uNearShrink: a spent pickup's two depths, then a drone's. */
+  nearLo: number; nearHi: number; droneLo: number; droneHi: number;
+  visible: boolean;
+}
+
+export function createShipPlane(): ShipPlane {
+  return {
+    depth: SHIP_FORWARD, gateOpen: SHIP_FORWARD - SHIP_HALF_LENGTH,
+    nearLo: NEAR_LO, nearHi: SHIP_FORWARD - NEAR_HI_BEHIND, droneLo: NEAR_LO, droneHi: SHIP_FORWARD - NEAR_HI_BEHIND, visible: true,
+  };
+}
+
+/**
+ * T13. forward is how far ahead of the sim's travel the ship is drawn (SHIP_FORWARD, or a sheet tool's value), and
+ * v.camAhead how far the view origin is ahead of that travel. With camAhead 0 every field is what it was before T13:
+ * depth forward, gateOpen forward - SHIP_HALF_LENGTH, and the shrink 2 to 11. v is read by field, so no double crosses the call.
+ */
+export function shipPlane(forward: number, v: { readonly camAhead: number }, out: ShipPlane): void {
+  const depth = forward - v.camAhead;
+  out.depth = depth;
+  out.gateOpen = depth - SHIP_HALF_LENGTH;
+  const k = depth <= 0 ? 0 : depth >= SHIP_FORWARD ? 1 : depth / SHIP_FORWARD;
+  out.nearLo = SHARD_LO_FIRST + (NEAR_LO - SHARD_LO_FIRST) * k;
+  out.droneLo = DRONE_LO_FIRST + (NEAR_LO - DRONE_LO_FIRST) * k;
+  const hi = depth - NEAR_HI_BEHIND;
+  out.nearHi = hi > SHARD_HI_FIRST ? hi : SHARD_HI_FIRST;
+  out.droneHi = hi > DRONE_HI_FIRST ? hi : DRONE_HI_FIRST;
+  out.visible = depth >= SHIP_SHOW_DEPTH;
+}
 
 /** One pose, in caller-owned storage. */
 export interface ShipPose {

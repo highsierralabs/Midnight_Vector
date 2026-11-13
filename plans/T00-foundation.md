@@ -6,7 +6,7 @@ owner: T00 executor
 depends_on: []
 owns: [package.json, package-lock.json, tsconfig*.json, vite.config.ts, vitest.config.ts, playwright.config.ts, eslint.config.js, .gitignore, scripts/**, src/contracts/**, src/core/**, src/testing/**, tests/support/**, tests/boundaries/**, tests/unit/core/**, plans/README.md, plans/T00-foundation.md]
 reads: [architecture.md, Agents.md, plans/**]
-updated: 2026-11-12T18:14Z
+updated: 2026-11-13T02:15Z
 ---
 
 ## 1. Purpose
@@ -664,6 +664,8 @@ Remaining in T00's own paths: nothing. `check:task` on a task with no files yet 
 - [x] 2026-11-12T18:04Z Gates: see `plans/T12-release.md` section 9, which records `npm run plans:check` and the whole-repo `npm run check` after these edits. A fresh clone's `npm ci` against the edited lockfile is T12's A7.
 
 - [x] 2026-11-12T18:14Z `tests/boundaries/gates.test.ts`, four lines. The file reads the real `architecture.md` and pinned the number of tasks at 12, so T12's row failed three assertions: the row list at line 71 and `12 plans` at lines 134 and 201 (`3 failed | 1987 passed | 2 skipped`; received 13 rows and `13 plans, 3187 pattern pairs, 0 problems`). Changed: the test's title, the row list (`'T12'` added) and the two `12 plans` strings, now `13 plans`. The operator agreed in session, verbatim: "Proceed with the fix for the 4 lines." The whole-repo result after it is in `plans/T12-release.md` section 9.
+- [x] 2026-11-13T01:07Z **Amendment VW (camera views, for T13, DI-121), reopened by the operator's approval of `plans/T13-views.md`, status `in-progress`.** Done so far: `plans/README.md` gains the T13 row and order line; `src/contracts/index.ts` and the section 8.1 fence gain T13's CR-1 lines (`RenderOrder.COCKPIT`, `CamMode`, `CAM_MODE_COUNT`, three `FrameView` fields, `UiCommands.setCamMode`, the optional `HarnessHost.overrideCam`), new lines only, `contracts:check` PASS at 509 lines present in order; `src/testing/scriptedFrame.ts` gives the three fields their chase values and takes an optional `cam`; `src/testing/fakeHost.ts` records `overrideCam`; new pure `src/core/cockpit.ts` (the cockpit unit, panels, slots and wheel reach, shared by props and the UI) with `tests/unit/core/cockpit.test.ts`; `tests/unit/core/uniforms.test.ts` and `fakeHost.test.ts` follow; `tests/boundaries/gates.test.ts` pins 14 tasks (VW-3). `npm run check` exit 0 at 2026-11-13T01:07Z less a few minutes: 121 files, 2011 passed, 2 skipped; glsl 191 files, 0 hits. Remaining: the cockpit slots may move when T08 lays the readouts out (T13 M6); close with T13.
+- [x] 2026-11-13T02:15Z **Amendment VW closed, status `done`.** Final code, one chain, nothing under `src/` edited while it ran: `npm run check` exit 0 (123 files, 2043 passed, 2 skipped; glsl 194 files, 0 hits); `plans:check` 0 problems; `contracts:check` PASS; `tests/views` on `gpu` 13 of 13 after the seed-155 row stopped gating chase (below); `tests/visual/ui.spec.ts` 304 passed; `tests/visual/props.spec.ts` 42 passed, 3 skipped (the software rows); `tests/e2e` on `gpu` 64 passed, 9 skipped, as before T13; `tests/art` metrics and motion 21 passed, chase S1far .0604 against .07, the value before T13; `tests/perf/bundle.spec.ts` 245.1 KB of 260.
 
 ## 10. Surprises and discoveries
 
@@ -789,6 +791,9 @@ From the VI-gates `test.fail()` repair, on 2026-11-06:
 | **PR-1: `package.json` states the licence, a description, the Pages address and the repository; `"private": true` stays** | The operator is releasing the game under MIT (T12, R-3). `private` concerns the npm registry, not the repository, and stops an accidental `npm publish` | 2026-11-12 | T00 owner, for the operator |
 | **PR-2: the lockfile's root entry is edited by hand** | The only difference npm would write is `"license": "MIT"` under the root package. A hand edit of that one line keeps every resolved version and integrity hash byte-identical, which an install might not | 2026-11-12 | T00 owner, for the operator |
 | **PR-3: the task-count pins in `gates.test.ts` move from 12 to 13** | They assert how many tasks `architecture.md` §12 has, and it now has 13. The assertions keep their force: the exact row list, the count printed by `plans:check`, and `0 problems` are all still required. An expected value changed, so the operator's agreement was asked for and given | 2026-11-12 | T00 owner, for the operator |
+| **VW-1: the camera lines of T13's CR-1 are added to section 8.1 and the contract file** | Additive, new lines only, approved by the operator with T13's plan. `FrameView`'s "camera z is always 0" stays true, because first person moves the view origin, not the camera | 2026-11-13 | T13 executor, for the operator |
+| **VW-2: the cockpit's layout lives in `src/core/cockpit.ts`** | Props draws the dashboard and the UI places readouts on it; siblings may not import each other (section 3.2), and one copy cannot drift | 2026-11-13 | T13 executor, for the operator |
+| **VW-3: `gates.test.ts` pins 14 tasks** | The same four lines as PR-3, a consequence of the section 12 row the operator approved | 2026-11-13 | T13 executor, for the operator |
 
 ## 12. Contract change requests
 
@@ -952,3 +957,5 @@ float droneOffset(float amp, float k, float seed, float phase) { return amp * si
 - 2026-11-06T12:18Z Reopened for VI-gates' low finding on the bare `test.fail()` control (A11f), acting for the T00 owner. `devshell.spec.ts`'s control now runs `tests/support/devshell/consoleguard.control.ts` through `consoleguard.config.ts`, both new and both under `tests/support/**`, and asserts the child report. Section 3 lists the two files, section 7's A11f row states the new acceptance and its drills, and sections 9, 10, 11 and 13 record the work. `pw.ts`, every contract and every config at the root are unchanged, and `owns` is unchanged. **Siblings:** nothing they import changed. Status back to `done`.
 - 2026-11-12T18:04Z **Amendment PR** (public release, for T12): `plans/README.md` gains the T12 row and order line; `package.json` gains `description`, `license`, `homepage` and `repository`; `package-lock.json`'s root entry gains `"license": "MIT"`. Progress, Decision log (PR-1, PR-2) and Outcomes updated. `owns` and `reads` unchanged. Status stays `done`. Not committed.
 - 2026-11-12T18:14Z **Amendment PR extended:** `tests/boundaries/gates.test.ts` pins 13 tasks instead of 12 (PR-3), four lines, with the operator's agreement. Status stays `done`. Not committed.
+- 2026-11-13T01:07Z **Amendment VW** (camera views, for T13, DI-121): reopened, status `in-progress`. `owns` and `reads` unchanged. Not committed.
+- 2026-11-13T02:15Z **Amendment VW** closed, status `done`. Not committed.

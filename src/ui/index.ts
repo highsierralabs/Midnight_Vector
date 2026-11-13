@@ -1,6 +1,7 @@
 // The only export of this module (section 3.2). Wires the parts. Panels follow only sim.mode, sim.autopilot and the
 // context-lost flag, and timers use v.tick, so a scripted frame reproduces any state.
-import { Ev, SimMode, type CreateUi, type FatalReason, type FrameView, type UiCommands } from '../contracts/index';
+import { CamMode, Ev, SimMode, type CreateUi, type FatalReason, type FrameView, type UiCommands } from '../contracts/index';
+import { COCKPIT_SLOTS, cockpitUnit } from '../core/cockpit';
 import { buildDom, type UiDom } from './dom';
 import { showFatalPage } from './fatal';
 import {
@@ -14,7 +15,7 @@ import { createPaletteWriter, type PaletteWriter } from './palette';
 import { createPopups, type Popups } from './popups';
 import { createRunMeter } from './run';
 import { createAttrSlot, createGate, type Gate, type Slot } from './slots';
-import { createBestsTracker, loadSettings, type BestsTracker, type StoreLike } from './storage';
+import { CAM_NAMES, createBestsTracker, loadSettings, type BestsTracker, type StoreLike } from './storage';
 import { ensureStyle } from './style';
 import { createTitle, launchChoice, type Title } from './title';
 import { MODE_NAMES, Panel, buildViewTable, deriveView, hudHidden, hudInert, menuHidden } from './view';
@@ -113,7 +114,7 @@ const pageStore: StoreLike = {
 
 interface Parts {
   dom: UiDom; hud: Hud; menu: Menu; overlays: Overlays; popups: Popups; title: Title; palette: PaletteWriter; bests: BestsTracker;
-  panelGate: Gate; viewTable: readonly string[]; modeAttr: Slot; reducedAttr: Slot; reach: Reach; cmd: UiCommands;
+  panelGate: Gate; viewTable: readonly string[]; modeAttr: Slot; reducedAttr: Slot; camAttr: Slot; dashAttr: Slot; reach: Reach; cmd: UiCommands;
 }
 
 export const createUi: CreateUi = () => {
@@ -143,6 +144,24 @@ export const createUi: CreateUi = () => {
     const viewTable = buildViewTable();
     root.setAttribute('data-view', viewTable[Panel.TITLE]!);
     root.setAttribute('data-reduced', reduced ? '1' : '0');
+    // T13: the camera the frame was drawn with, and whether the readouts sit on the cockpit's dashboard.
+    root.setAttribute('data-cam', CAM_NAMES[CamMode.CHASE]);
+    root.setAttribute('data-dash', '0');
+    // T13: where the dashboard is, for ui.css. Each slot's corner and size in cockpit units, written once, and one cockpit
+    // unit in CSS pixels, kept by a resize observer and never written per frame. The props layer scales the dashboard it
+    // draws by the same unit of the same stage, so a readout lands on its panel.
+    for (const name of ['score', 'status', 'nav'] as const) {
+      const r = COCKPIT_SLOTS[name];
+      root.style.setProperty(`--mv-${name}-x`, String(r.x0));
+      root.style.setProperty(`--mv-${name}-y`, String(r.y0));
+      root.style.setProperty(`--mv-${name}-w`, String(r.x1 - r.x0));
+      root.style.setProperty(`--mv-${name}-h`, String(r.y1 - r.y0));
+    }
+    const writeCockpitUnit = (): void => {
+      root.style.setProperty('--mv-cu', `${cockpitUnit(root.clientWidth, root.clientHeight)}px`);
+    };
+    writeCockpitUnit();
+    new ResizeObserver(writeCockpitUnit).observe(root);
     document.documentElement.setAttribute('data-mv-mode', MODE_NAMES[SimMode.DEMO]);
 
     const dom = buildDom(document, root);
@@ -204,6 +223,9 @@ export const createUi: CreateUi = () => {
       const code = e.code;
       if (code === 'KeyM') {
         if (!e.repeat) menu.toggleMute();
+      } else if (code === 'KeyC') {
+        // T13: the next camera. Not on the title, which always shows chase and has no control that would show the change.
+        if (!e.repeat && lastMode !== SimMode.DEMO) menu.cycleCam();
       } else if (code === 'Escape' || code === 'KeyP') {
         // FH-7: in fullscreen Esc is the browser's, which leaves fullscreen with it; from PLAY, FH-8 then opens CRUISE.
         if (!e.repeat && !(code === 'Escape' && escIsBrowsers(document))) tryToggle();
@@ -226,6 +248,8 @@ export const createUi: CreateUi = () => {
       panelGate: createGate(),
       modeAttr: createAttrSlot(document.documentElement, 'data-mv-mode', MODE_NAMES),
       reducedAttr: createAttrSlot(root, 'data-reduced', NO_YES),
+      camAttr: createAttrSlot(root, 'data-cam', CAM_NAMES),
+      dashAttr: createAttrSlot(root, 'data-dash', NO_YES),
     };
 
     // Mount sends these at once, so their targets must exist before mount (UiCommands).
@@ -233,6 +257,7 @@ export const createUi: CreateUi = () => {
     else cmd.setVolume(settings.music, settings.sfx);
     if (settings.quality !== 'auto') cmd.setQuality(settings.quality);
     cmd.setReducedMotion(reduced);
+    cmd.setCamMode(settings.cam);
 
     // On a touch screen nobody asked for focus, and the ring only doubled the button's edge (V1-T08). Focus is still
     // there for Enter and a screen reader, and the ring returns as soon as a keyboard moves it.
@@ -274,6 +299,8 @@ export const createUi: CreateUi = () => {
     p.title.frame(tick, mode);
     p.modeAttr.set(tick, mode);
     p.reducedAttr.set(tick, v.reducedMotion ? 1 : 0);
+    p.camAttr.set(tick, v.camMode);
+    p.dashAttr.set(tick, v.camMode === CamMode.COCKPIT && v.cockpitIn >= 1 ? 1 : 0);
     p.palette.frame(tick, v.zone);
 
     const mask = deriveView(mode, s.autopilot, contextLost);

@@ -28,7 +28,7 @@ describe('isLaunchKey', () => {
     'Escape', 'CapsLock', 'NumLock', 'ScrollLock', 'ContextMenu', 'PrintScreen', 'Pause',
     'F1', 'F2', 'F5', 'F10', 'F11', 'F12',
     'AudioVolumeUp', 'AudioVolumeMute', 'BrowserBack', 'BrowserRefresh', 'MediaPlayPause', 'MediaTrackNext',
-    'KeyM', 'KeyP',
+    'KeyM', 'KeyP', 'KeyC',
   ];
   for (const code of never) {
     it(`${code} does not launch`, () => {

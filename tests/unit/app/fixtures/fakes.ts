@@ -12,6 +12,7 @@ import { advance, canWarp } from '../../../../src/core/coords';
 import { createSharedUniforms } from '../../../../src/core/uniforms';
 import { fakeProfile } from '../../../../src/testing/scriptedFrame';
 import { createCounters, createFlags, createLoop, createOverrides, type Loop, type LoopDeps } from '../../../../src/app/loop';
+import { createCamState } from '../../../../src/app/cam';
 import { createAppView, type AppView } from '../../../../src/app/view';
 
 export interface Rec { on: boolean; log: string[] }
@@ -308,7 +309,7 @@ export function createRig(o: { record?: boolean } = {}): Rig {
     detach() { /* lifecycle only */ },
   };
   const renderer = { info: { reset() { rec(r, 'info.reset'); } } };
-  const sizing = { gainX: 0.72, applyIfDirty: () => false };
+  const sizing = { gainX: 0.72, fovCapFirst: 180, applyIfDirty: () => false };
   const control: ControlFrame = { moveX: 0, moveY: 0, absolute: false, boost: false, human: false };
   const view = createAppView(sim.state, sim.events, feel.out, gov.profile);
   const fatal: [FatalReason, unknown][] = [];
@@ -316,7 +317,7 @@ export function createRig(o: { record?: boolean } = {}): Rig {
   const deps: LoopDeps = {
     raf: raf.raf, caf: raf.caf,
     input, sim, world, feel, neutralFeel: createNeutralFeel(),
-    layers, post, ui, audio, renderer, camera, shared, sizing, view, control,
+    layers, post, ui, audio, renderer, camera, shared, sizing, view, control, cam: createCamState(),
     flags: createFlags(), overrides: createOverrides(), counters: createCounters(),
     governor: () => gov,
     onFatal: (reason, e) => { fatal.push([reason, e]); },

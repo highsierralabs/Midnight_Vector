@@ -4,7 +4,7 @@
 import { PerspectiveCamera, Vector3 } from 'three';
 import { describe, expect, it } from 'vitest';
 import { CAMERA_FAR, CAMERA_FOV, CAMERA_NEAR, CAMERA_PITCH, CAMERA_Y, PLAY_HALF_X, PLAY_Y_MAX, PLAY_Y_MIN, SHIP_FORWARD } from '../../../src/contracts/index';
-import { FOLLOW_EDGE, FOLLOW_Y, followGainX } from '../../../src/app/follow';
+import { FIRST_HALF_TAN_MAX, FOLLOW_EDGE, FOLLOW_Y, firstPersonFovCap, followGainX } from '../../../src/app/follow';
 import { SHIP_HALF_LENGTH, SHIP_HALF_WIDTH, buildShipBody } from '../../../src/render/props/ship';
 
 const SHIP = buildShipBody().position;
@@ -139,5 +139,22 @@ describe('the ship stays in frame at both lane edges at every aspect (DI-81, DI-
     console.log(`FOLLOW outer wing NDC at x = ${PLAY_HALF_X}, gain .72: ${rows.join(', ')}`);
     expect(outerNdc(WIDE, PLAY_HALF_X, 0, 0, 0.72)).toBeGreaterThan(1);
     expect(outerNdc(WIDE, -PLAY_HALF_X, 0, 0, 0.72)).toBeGreaterThan(1);
+  });
+});
+
+describe('firstPersonFovCap (T13)', () => {
+  it('is 66 degrees at 21:9, under section 6.4’s 68 there, and falls as the stage widens', () => {
+    expect(firstPersonFovCap(2520 / 1080)).toBeCloseTo(66, 1);
+    expect(firstPersonFovCap(2520 / 1080)).toBeLessThan(67);
+    expect(firstPersonFovCap(3440 / 1440)).toBeLessThan(firstPersonFovCap(2520 / 1080));
+    expect(firstPersonFovCap(32 / 9)).toBeCloseTo((2 * Math.atan(FIRST_HALF_TAN_MAX / (32 / 9)) * 180) / Math.PI, 12);
+  });
+
+  it('does not bite at 16:9, 4:3 or on a phone, where feel’s own 68 is the most there is', () => {
+    for (const aspect of [16 / 9, 4 / 3, 844 / 390, 390 / 844]) expect(firstPersonFovCap(aspect), String(aspect)).toBeGreaterThan(68);
+  });
+
+  it('is tighter than section 6.4’s cap at every aspect', () => {
+    expect(FIRST_HALF_TAN_MAX).toBeLessThan(1.574);
   });
 });

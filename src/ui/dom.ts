@@ -59,6 +59,9 @@ export interface UiDom {
   readonly sfx: HTMLInputElement;
   readonly mute: HTMLInputElement;
   readonly quality: readonly HTMLInputElement[];
+  /** T13: the camera button, which steps through the three, and the name it shows. */
+  readonly cam: HTMLButtonElement;
+  readonly camName: Text;
   readonly autoLabel: Text;
   /** Amendment FH. The row is hidden where the browser has no element fullscreen; ui.css makes hidden mean not drawn. */
   readonly fullscreen: HTMLInputElement;
@@ -191,6 +194,14 @@ export function buildDom(doc: Document, root: HTMLElement): UiDom {
   };
   addRadio('auto', autoLabel);
   for (const t of copy.TIER_ORDER) addRadio(String(t), copy.TIER_NAMES[t]);
+  // T13: the camera is one button that steps through the three, as the C key does. It shares MUTE's row, because the
+  // card has no height for a row more on a short landscape phone (amendment FH's [P2] again).
+  const camName = doc.createTextNode(copy.CAMERA_NAMES[0]!);
+  const cam = h(doc, 'button', { type: 'button', class: 'mv-cam', 'data-mv': 'camera', 'aria-label': copy.CAMERA_ARIA[0]! },
+    h(doc, 'span', { class: 'mv-cam-long' }, copy.LABEL_CAMERA),
+    h(doc, 'span', { class: 'mv-cam-short' }, copy.LABEL_CAMERA_SHORT),
+    ': ',
+    camName);
   const runScore = doc.createTextNode('');
   const runKm = doc.createTextNode('');
   const bestScore = doc.createTextNode('');
@@ -211,7 +222,7 @@ export function buildDom(doc: Document, root: HTMLElement): UiDom {
       h(doc, 'div', { class: 'mv-card-controls' },
         music.row,
         sfx.row,
-        mute.row,
+        h(doc, 'div', { class: 'mv-pair' }, mute.row, cam),
         // One choice of six, so one radio group to assistive technology, named by its legend; ui.css draws the radios round.
         h(doc, 'fieldset', { class: 'mv-quality', 'data-mv': 'quality', role: 'radiogroup' },
           h(doc, 'legend', { class: 'mv-label' }, copy.LABEL_QUALITY),
@@ -240,7 +251,7 @@ export function buildDom(doc: Document, root: HTMLElement): UiDom {
   return {
     root, title, launch, launchNoHud, best, hud, score, scoreEl, sync, syncEl, shields, overdrive, overdriveFill, km, sector, objective,
     menuButton, boostButton, popups, popupText, banner, bannerTitle, bannerObjective, bannerGrade, autoTag, live,
-    cruise, resume, music: music.range, sfx: sfx.range, mute: mute.box, quality, autoLabel,
+    cruise, resume, music: music.range, sfx: sfx.range, mute: mute.box, quality, cam, camName, autoLabel,
     fullscreen: fullscreen.box, fullscreenRow: fullscreen.row, hideHud: hideHud.box, reduced: reduced.box,
     runScore, runKm, bestScore, bestKm,
   };

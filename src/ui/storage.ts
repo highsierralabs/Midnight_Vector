@@ -1,6 +1,6 @@
 // Bests and settings over an injected store. Every access is in try/catch, since private modes and blocked storage throw
 // on read as well as on write (Agents.md). Bad data gives defaults and never an exception.
-import type { Tier } from '../contracts/index';
+import { CamMode, type Tier } from '../contracts/index';
 
 export interface StoreLike {
   getItem(key: string): string | null;
@@ -20,11 +20,13 @@ export interface Settings {
   reduced: boolean | null;
   /** HIDE HUD (amendment FH). Absent or not a boolean in a stored object loads false, so a store from before FH loads as it was. */
   hideHud: boolean;
+  /** T13: the camera. Absent or unknown in a stored object loads CHASE, so a store from before T13 loads as it was. */
+  cam: CamMode;
 }
 export interface Bests { score: number; km: number }
 
 export function defaultSettings(): Settings {
-  return { music: 0.8, sfx: 0.8, muted: false, quality: 'auto', reduced: null, hideHud: false };
+  return { music: 0.8, sfx: 0.8, muted: false, quality: 'auto', reduced: null, hideHud: false, cam: CamMode.CHASE };
 }
 
 function read(store: StoreLike, key: string): unknown {
@@ -57,6 +59,18 @@ function quality(v: unknown): Tier | 'auto' {
   return v === 0 || v === 1 || v === 2 || v === 3 || v === 4 ? v : 'auto';
 }
 
+/** T13: a camera is stored by name, indexed by CamMode, so the stored object reads plainly. */
+export const CAM_NAMES = ['chase', 'cockpit', 'nose'] as const;
+
+function cam(v: unknown): CamMode {
+  return v === CAM_NAMES[CamMode.COCKPIT] ? CamMode.COCKPIT : v === CAM_NAMES[CamMode.NOSE] ? CamMode.NOSE : CamMode.CHASE;
+}
+
+/** T13: the C key's order: chase, cockpit, nose, and round again. */
+export function nextCam(m: CamMode): CamMode {
+  return m === CamMode.CHASE ? CamMode.COCKPIT : m === CamMode.COCKPIT ? CamMode.NOSE : CamMode.CHASE;
+}
+
 export function loadSettings(store: StoreLike): Settings {
   const d = defaultSettings();
   const o = read(store, SETTINGS_KEY);
@@ -70,11 +84,12 @@ export function loadSettings(store: StoreLike): Settings {
     quality: quality(field(o, 'quality')),
     reduced: typeof reduced === 'boolean' ? reduced : null,
     hideHud: typeof hideHud === 'boolean' ? hideHud : d.hideHud,
+    cam: cam(field(o, 'cam')),
   };
 }
 
 export function saveSettings(store: StoreLike, s: Readonly<Settings>): void {
-  write(store, SETTINGS_KEY, { music: s.music, sfx: s.sfx, muted: s.muted, quality: s.quality, reduced: s.reduced, hideHud: s.hideHud });
+  write(store, SETTINGS_KEY, { music: s.music, sfx: s.sfx, muted: s.muted, quality: s.quality, reduced: s.reduced, hideHud: s.hideHud, cam: CAM_NAMES[s.cam] });
 }
 
 function best(v: unknown): number {

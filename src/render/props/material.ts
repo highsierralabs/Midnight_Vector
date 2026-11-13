@@ -1,11 +1,15 @@
-// The ShaderMaterial families: at most 6 programs. Normal, mirror (BackSide), additive, CUTOUT (the only one with discard,
-// used by CASSETTE alone), ship body and ship glow. Every per-ring value is a uniform, not a define, so rings share programs and
+// The ShaderMaterial families: at most 7 programs. Normal, mirror (BackSide), additive, CUTOUT (the only one with discard,
+// used by CASSETTE alone), ship body, ship glow and, since T13, the cockpit, which has its own small pair of shaders. Every per-ring value is a uniform, not a define, so rings share programs and
 // nothing recompiles when a tier changes. Shared uniforms are spread by reference. Never clone a material here.
 import { AdditiveBlending, BackSide, DoubleSide, FrontSide, ShaderMaterial, type IUniform } from 'three';
 import { RenderOrder, SHIP_FORWARD, TRAFFIC_FADE, type SharedUniforms } from '../../contracts/index';
 import { COMMON_FRAG, COMMON_VERT } from '../../contracts/glsl';
+import { COCKPIT_EYE_Y, COCKPIT_HUB, COCKPIT_WHEEL_PULL, COCKPIT_WHEEL_TURN } from '../../core/cockpit';
 import { Look, Motion, type LookDef } from './archetypes';
+import { COCKPIT_EDGE_W, COCKPIT_ZOOM } from './cockpit';
 import { SHIP_HALF_LENGTH } from './ship';
+import cockpitFragSource from './glsl/cockpit.frag.glsl?raw';
+import cockpitVertSource from './glsl/cockpit.vert.glsl?raw';
 import neonSource from './glsl/neon.glsl?raw';
 import fragSource from './glsl/props.frag.glsl?raw';
 import vertSource from './glsl/props.vert.glsl?raw';
@@ -53,6 +57,8 @@ export interface LayerUniforms {
   uViewH: { value: number };
   /** The depth of the ship's tail ahead of the camera, in u. A gate nearer than this has been cleared and opens out (DI-113). */
   uGateOpen: { value: number };
+  /** T13: the depths ahead of the camera between which a spent pickup (x, y) and a drone (z, w) shrink away, far edge second. 2 and 11 in chase. */
+  uNearShrink: { value: Float32Array };
 }
 
 export function createLayerUniforms(): LayerUniforms {
@@ -60,6 +66,7 @@ export function createLayerUniforms(): LayerUniforms {
     uRingCut: { value: 1 },
     uViewH: { value: 1080 },
     uGateOpen: { value: SHIP_FORWARD - SHIP_HALF_LENGTH },
+    uNearShrink: { value: Float32Array.of(2, 11, 2, 11) },
     uDensity: { value: 1 },
     uDensityWindow: { value: 0.03 },
     uGhost: { value: 0 },
@@ -187,4 +194,45 @@ export function shipMaterial(
   return m;
 }
 
-export const RENDER_ORDER = { mirror: RenderOrder.MIRROR, normal: RenderOrder.PROP, ship: RenderOrder.SHIP, additive: RenderOrder.ADDITIVE } as const;
+export const RENDER_ORDER = {
+  mirror: RenderOrder.MIRROR, normal: RenderOrder.PROP, ship: RenderOrder.SHIP, additive: RenderOrder.ADDITIVE, cockpit: RenderOrder.COCKPIT,
+} as const;
+
+/** T13: the layout's numbers as GLSL constants, so the wheel in the program is the wheel of src/core/cockpit.ts. */
+export function cockpitConstants(): string {
+  const f = (n: number): string => n.toFixed(5);
+  return `#define COCKPIT_HUB vec2(${f(COCKPIT_HUB.x)}, ${f(COCKPIT_HUB.y)})\n`
+    + `#define COCKPIT_EYE vec2(0., ${f(COCKPIT_EYE_Y)})\n`
+    + `#define COCKPIT_TURN ${f(COCKPIT_WHEEL_TURN)}\n`
+    + `#define COCKPIT_PULL ${f(COCKPIT_WHEEL_PULL)}\n`
+    + `#define COCKPIT_ZOOM ${f(COCKPIT_ZOOM)}\n`;
+}
+
+export interface CockpitUniforms {
+  /** x, y: one cockpit unit in clip units; z: cockpitIn; w: blink. */
+  uCockpit: { value: Float32Array };
+  /** turn, pull. */
+  uYoke: { value: Float32Array };
+  uEdgeW: { value: number };
+}
+
+export function createCockpitUniforms(): CockpitUniforms {
+  return { uCockpit: { value: Float32Array.of(1, 2, 0, 1) }, uYoke: { value: new Float32Array(2) }, uEdgeW: { value: COCKPIT_EDGE_W } };
+}
+
+/**
+ * T13: the cockpit's one program. It is drawn last, in the transparent list so it follows the additive draws and the
+ * speed lines, with no depth test: its triangles are already in painter's order, and it covers what is behind it.
+ */
+export function cockpitMaterial(shared: SharedUniforms, cockpit: CockpitUniforms): ShaderMaterial {
+  return new ShaderMaterial({
+    name: 'props-cockpit',
+    vertexShader: cockpitConstants() + COMMON_VERT + cockpitVertSource,
+    fragmentShader: COMMON_FRAG + neonSource + cockpitFragSource,
+    uniforms: { ...shared, ...cockpit } as unknown as Record<string, IUniform>,
+    depthTest: false,
+    depthWrite: false,
+    transparent: true,
+    side: DoubleSide,
+  });
+}

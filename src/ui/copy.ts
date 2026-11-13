@@ -13,7 +13,7 @@ export const PROMPT_LOADING = 'LOADING';
 /** [control, action] pairs. The touch list replaces the keyboard list on a coarse pointer. */
 export const LEGEND_KEYS: readonly (readonly [string, string])[] = [
   ['WASD / ARROWS', 'STEER'], ['MOUSE', 'AIM'], ['SPACE / CLICK', 'BOOST'], ['DOUBLE-TAP', 'LOCK'], ['ESC / P', 'CRUISE'],
-  ['M', 'MUTE'],
+  ['M', 'MUTE'], ['C', 'CAMERA'],
 ];
 export const LEGEND_TOUCH: readonly (readonly [string, string])[] = [
   ['DRAG', 'STEER'], ['2ND FINGER / BUTTON', 'BOOST'], ['DOUBLE-TAP', 'LOCK'], ['II', 'CRUISE'],
@@ -42,6 +42,11 @@ export const LABEL_MUSIC = 'MUSIC';
 export const LABEL_SFX = 'SFX';
 export const LABEL_MUTE = 'MUTE';
 export const LABEL_QUALITY = 'QUALITY';
+/** T13. The camera button: its label, the short one a narrow card shows, the cameras' names by CamMode, and what a screen reader hears. */
+export const LABEL_CAMERA = 'CAMERA';
+export const LABEL_CAMERA_SHORT = 'CAM';
+export const CAMERA_NAMES: readonly string[] = ['CHASE', 'COCKPIT', 'NOSE'];
+export const CAMERA_ARIA: readonly string[] = CAMERA_NAMES.map((n) => `Camera: ${n.toLowerCase()}. Press for the next camera.`);
 export const LABEL_REDUCED = 'REDUCED MOTION';
 export const LABEL_FULLSCREEN = 'FULLSCREEN';
 export const LABEL_HIDE_HUD = 'HIDE HUD';

@@ -1,6 +1,6 @@
 // The app's one FrameView, mutated in place each frame, and the step 5 and 6 helpers of section 3.3. Pure.
 import {
-  CAMERA_Y, PHASE_COUNT, SIM_HZ,
+  CAMERA_Y, CamMode, PHASE_COUNT, SIM_HZ,
   type BendState, type EventBuffer, type FeelState, type FrameView, type QualityProfile, type SimState, type Travel, type ZoneState,
 } from '../contracts/index';
 import { createBendState, createZoneState } from '../core/alloc';
@@ -12,6 +12,7 @@ export interface AppView {
   dt: number; tick: number; alpha: number;
   readonly cam: Travel;
   camX: number; camY: number;
+  camMode: CamMode; camAhead: number; cockpitIn: number;
   readonly phases: Float32Array;
   readonly sim: Readonly<SimState>;
   feel: Readonly<FeelState>;
@@ -31,6 +32,7 @@ export function createAppView(sim: Readonly<SimState>, events: EventBuffer, feel
     dt: 0, tick: sim.tick, alpha: 0,
     cam: { chunk: sim.travel.chunk, local: sim.travel.local },
     camX: 0, camY: CAMERA_Y,
+    camMode: CamMode.CHASE, camAhead: 0, cockpitIn: 0,
     phases: new Float32Array(PHASE_COUNT),
     sim, feel,
     zone: createZoneState(),

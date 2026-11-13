@@ -1,10 +1,10 @@
 // The cruise menu. Native controls give roles and arrow keys for free, and every change persists at once.
-import type { FrameView, Tier, UiCommands } from '../contracts/index';
+import type { CamMode, FrameView, Tier, UiCommands } from '../contracts/index';
 import * as copy from './copy';
 import type { UiDom } from './dom';
 import { formatKm, formatScore, kmKey } from './format';
 import { createGate, createTextSlot } from './slots';
-import { saveSettings, type Bests, type Settings, type StoreLike } from './storage';
+import { nextCam, saveSettings, type Bests, type Settings, type StoreLike } from './storage';
 
 export interface Menu {
   frame(v: Readonly<FrameView>, run: Float64Array, bests: Readonly<Bests>): void;
@@ -14,6 +14,8 @@ export interface Menu {
    */
   setOpen(open: boolean, ring: boolean): void;
   toggleMute(): void;
+  /** T13: the C key. The next camera, as if its radio had been chosen. */
+  cycleCam(): void;
   /** Amendment LH: a start button chose the HUD. The same setting as the HIDE HUD box, written only on a change. */
   chooseHud(hide: boolean): void;
   /** Keydown on window: Tab with the focus outside the open dialog goes back into it. */
@@ -84,6 +86,20 @@ export function createMenu(
     });
   }
 
+  // T13: the camera. The button and the C key both step to the next one.
+  function showCam(m: CamMode): void {
+    dom.camName.data = copy.CAMERA_NAMES[m]!;
+    dom.cam.setAttribute('aria-label', copy.CAMERA_ARIA[m]!);
+  }
+  function setCam(m: CamMode): void {
+    settings.cam = m;
+    showCam(m);
+    cmd.setCamMode(m);
+    persist();
+  }
+  showCam(settings.cam);
+  dom.cam.addEventListener('click', () => { setCam(nextCam(settings.cam)); });
+
   dom.reduced.addEventListener('change', () => {
     settings.reduced = dom.reduced.checked;
     cmd.setReducedMotion(settings.reduced);
@@ -145,6 +161,7 @@ export function createMenu(
       if (at instanceof HTMLElement && dom.cruise.contains(at)) at.blur();
     },
     toggleMute() { setMuted(!settings.muted); },
+    cycleCam() { setCam(nextCam(settings.cam)); },
     chooseHud(hide) {
       if (hide === settings.hideHud) return;
       settings.hideHud = hide;

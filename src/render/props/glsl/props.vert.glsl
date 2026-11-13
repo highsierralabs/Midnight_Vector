@@ -9,6 +9,7 @@ const float THIN_PX = 1.25;                              // the narrowest a thin
 in mat4 aInst;
 vec4 aInstA, aInstB, aInstC;
 uniform float uMaxDist, uDensity, uDensityWindow, uTrafficFade, uUseYaw, uGrounded, uReduced, uUnitScale, uRingCut, uViewH, uGateOpen;
+uniform vec4 uNearShrink;                                // T13: a pickup's two depths, then a drone's; 2 and 11 in chase
 uniform int uMotion, uSpinPhase, uLook;
 uniform float uSpinK;
 uniform vec3 uPivot;
@@ -38,8 +39,11 @@ void main() {
   if (zf < -30. || zf > md || aInstB.z >= uDensity) { gl_Position = vec4(2., 2., 2., 1.); return; }
   float shrink = sMul * (1. - smoothstep(md * .92, md, zf));
   shrink *= min((uDensity - aInstB.z) / uDensityWindow, 1.);   // shrink as the density ramp passes, instead of a pop
-  // Past the ship plane a pickup or a drone has done its work, and at the camera it would fill the frame.
-  if (uMotion == M_SHARD || uMotion == M_DRONE) shrink *= smoothstep(2., 11., zf);
+  // Past the ship plane a pickup or a drone has done its work, and at the camera it would fill the frame. The depths follow the
+  // ship plane (T13): 2 and 11 for both with the ship 14 u ahead. With the view origin on the ship a pickup shrinks from 9 u, as
+  // it is flown into, and a drone, which can still hit, only from 3.
+  if (uMotion == M_SHARD) shrink *= smoothstep(uNearShrink.x, uNearShrink.y, zf);
+  else if (uMotion == M_DRONE) shrink *= smoothstep(uNearShrink.z, uNearShrink.w, zf);
   // A placeholder item stays a unit box whatever its radius, so a fence's 42 u does not cover the frame.
   float s = (uUnitScale > .5 ? 1. : aInstB.y) * shrink;
 

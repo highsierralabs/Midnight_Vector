@@ -18,6 +18,7 @@ import { createSim } from '../sim/index';
 import { createUi } from '../ui/index';
 import { createWorld } from '../world/index';
 import { measureBootP95 } from './bootTiming';
+import { createCamState } from './cam';
 import { createCommands } from './commands';
 import { createHost } from './host';
 import { createLifecycle, type LifecycleApp } from './lifecycle';
@@ -47,7 +48,8 @@ export async function bootApp(o: BootOptions): Promise<void> {
   let bootGovernor: Governor = createGovernor({ software: false, bootP95Ms: 0, forced: 3 });
   const view = createAppView(sim.state, sim.events, feel.out, bootGovernor.profile);
   let governor: Governor | null = null;
-  const commands = createCommands({ sim, audio, view, governor: () => governor });
+  const cam = createCamState();
+  const commands = createCommands({ sim, audio, view, cam, governor: () => governor });
   const flags = createFlags();
   const counters = createCounters();
   const overrides = createOverrides();
@@ -103,7 +105,7 @@ export async function bootApp(o: BootOptions): Promise<void> {
     const loop = createLoop({
       raf: (cb) => requestAnimationFrame(cb),
       caf: (h) => { cancelAnimationFrame(h); },
-      input, sim, world, feel, neutralFeel, layers, post, ui, audio, renderer, camera, shared, sizing, view, control,
+      input, sim, world, feel, neutralFeel, layers, post, ui, audio, renderer, camera, shared, sizing, view, control, cam,
       flags, overrides, counters,
       governor: () => governor ?? bootGovernor,
       onFatal: lifecycle.onFatal,
@@ -181,6 +183,7 @@ export async function bootApp(o: BootOptions): Promise<void> {
           counters,
           contextOk: () => flags.contextOk,
           camera: () => ({ fov: camera.fov, aspect: camera.aspect, gainX: sizing.gainX }),
+          cam: () => ({ want: cam.want, mode: view.camMode, ahead: view.camAhead, cockpitIn: view.cockpitIn, camX: view.camX, camY: view.camY }),
           forceSignalLost: () => { sim.forceSignalLost(); },
           lastRawDt: () => loop.lastRawDt,
         };

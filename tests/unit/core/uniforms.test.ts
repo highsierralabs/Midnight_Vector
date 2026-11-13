@@ -23,6 +23,7 @@ function makeView(): TestView {
   const bend = createBendState();
   const v: FrameView = {
     dt: 0, tick: 0, alpha: 0, cam: { chunk: 2 ** 40 + 63, local: 12.5 }, camX: 3, camY: 7,
+    camMode: 0, camAhead: 0, cockpitIn: 0,
     phases: new Float32Array(PHASE_COUNT), sim, feel, zone, bend, events: createEventBuffer(), quality, reducedMotion: false,
   };
   return { v, feel, zone, bend };

@@ -1,10 +1,10 @@
-// Which keys launch. Tab stays navigation for keyboard users, though it does grant activation, and M and P have their
-// own meaning. Escape grants no activation at all, so audio could not start on it even if it launched.
+// Which keys launch. Tab stays navigation for keyboard users, though it does grant activation, and M, P and C (T13: the
+// camera) have their own meaning. Escape grants no activation at all, so audio could not start on it even if it launched.
 
 const NEVER = new Set<string>([
   'Tab', 'Escape', 'CapsLock', 'NumLock', 'ScrollLock', 'ContextMenu', 'PrintScreen', 'Pause',
   'ShiftLeft', 'ShiftRight', 'ControlLeft', 'ControlRight', 'AltLeft', 'AltRight', 'MetaLeft', 'MetaRight', 'OSLeft', 'OSRight',
-  'KeyM', 'KeyP',
+  'KeyM', 'KeyP', 'KeyC',
 ]);
 
 export function isLaunchKey(code: string, ctrl: boolean, alt: boolean, meta: boolean): boolean {

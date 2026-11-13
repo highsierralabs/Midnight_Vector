@@ -27,6 +27,21 @@ const HALF_TAN = Math.tan((CAMERA_FOV / 2) * Math.PI / 180);
  * about 2.3023 up, so 21:9 and B7's edge-paint case keep .72. Round 1 kept only the centre in frame at the ship plane
  * (.924 at 390x844, outer wing at NDC 1.54), and round 2 held .72 from 16:9 up (outer wing at NDC 1.104 there, D-011).
  */
+/**
+ * T13: first person's own cap on the horizontal half-tangent of the field of view, under section 6.4's 1.574. That bound was
+ * drawn for a camera no further out than the chase camera's x 28.8 at 21:9. First person puts the camera on the ship, out to
+ * x 40 at the lane wall, and there, at 21:9, FOV 68 and full bend, 207 to 235 of about 185,000 painted boundary pixels kept
+ * less than full fog [O: tests/views/measure.spec.ts]. With this cap none does. It bites only on a stage wider than about
+ * 2.25:1, and only while boost or a gate pulse has widened the view: at 21:9 the field stops at 66 degrees in place of 68.
+ * A probe at 21:9 read 279 to 313 bad pixels at 68 degrees and 0 at 67 and below, so 66 keeps a degree in hand.
+ */
+export const FIRST_HALF_TAN_MAX = 1.515;
+
+/** The widest field of view first person may use at this aspect, in degrees. */
+export function firstPersonFovCap(aspect: number): number {
+  return (2 * Math.atan(FIRST_HALF_TAN_MAX / aspect) * 180) / Math.PI;
+}
+
 export function followGainX(aspect: number): number {
   return Math.max(BASE, 1 - (FOLLOW_EDGE * HALF_TAN * aspect * WING_DEPTH - SHIP_HALF_WIDTH) / PLAY_HALF_X);
 }

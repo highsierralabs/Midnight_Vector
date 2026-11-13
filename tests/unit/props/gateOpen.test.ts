@@ -31,7 +31,8 @@ function gateOpenValues(root: Object3D): Set<unknown> {
   root.traverse((o) => {
     if (!(o instanceof Mesh)) return;
     const mats: unknown[] = Array.isArray(o.material) ? o.material : [o.material];
-    for (const m of mats) if (m instanceof ShaderMaterial) out.add(m.uniforms['uGateOpen']?.value);
+    // T13: the cockpit has its own program, which is no prop and reads no gate depth.
+    for (const m of mats) if (m instanceof ShaderMaterial && m.name !== 'props-cockpit') out.add(m.uniforms['uGateOpen']?.value);
   });
   return out;
 }

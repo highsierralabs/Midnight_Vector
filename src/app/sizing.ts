@@ -5,7 +5,7 @@
 // its own: a resolution media query, and a slow poll against the ratio last applied.
 import type { PerspectiveCamera } from 'three';
 import type { PostStack } from '../contracts/index';
-import { followGainX } from './follow';
+import { firstPersonFovCap, followGainX } from './follow';
 
 /**
  * How often the ratio is compared with the one last applied. Under CDP's deviceScaleFactor emulation no resize event,
@@ -17,7 +17,9 @@ export const DPR_POLL_MS = 250;
 export interface Sizing {
   /** Camera x per ship x for the current aspect. Recomputed only when a resize applies. */
   readonly gainX: number;
-  /** Applies a pending resize: camera aspect, projection, gainX and post.resize. Returns true when it applied one. */
+  /** T13: the widest field of view first person may use at the current aspect, in degrees. Recomputed with gainX. */
+  readonly fovCapFirst: number;
+  /** Applies a pending resize: camera aspect, projection, gainX, fovCapFirst and post.resize. Returns true when it applied one. */
   applyIfDirty(camera: PerspectiveCamera, post: PostStack): boolean;
   dispose(): void;
 }
@@ -63,6 +65,7 @@ export function createSizing(stage: HTMLElement): Sizing {
   // gainX is a plain data field, not a getter: a double returned through a call is boxed every frame (Agents.md).
   const sizing = {
     gainX: followGainX(aspectOf(stage)),
+    fovCapFirst: firstPersonFovCap(aspectOf(stage)),
     applyIfDirty(camera: PerspectiveCamera, post: PostStack): boolean {
       if (!st.dirty) return false;
       st.dirty = false;
@@ -75,6 +78,7 @@ export function createSizing(stage: HTMLElement): Sizing {
         camera.updateProjectionMatrix();
       }
       sizing.gainX = followGainX(aspect);
+      sizing.fovCapFirst = firstPersonFovCap(aspect);
       const dpr = window.devicePixelRatio;
       post.resize(w, h, dpr);
       st.appliedDpr = dpr;

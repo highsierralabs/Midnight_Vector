@@ -25,6 +25,9 @@ describe('createFakeHost in Node', () => {
     host.overrideFov(68);
     host.overrideFov(null);
     host.overrideFeel({ shakeY: -0.05 });
+    host.overrideCam?.(1);
+    host.overrideCam?.(null);
+    expect(host.calls.overrideCam).toEqual([1, null]);
     expect(host.calls.setManual).toEqual([true]);
     expect(host.calls.runFrame).toEqual([1 / 60]);
     expect(host.calls.renderState).toEqual([[5, 3, 120]]);

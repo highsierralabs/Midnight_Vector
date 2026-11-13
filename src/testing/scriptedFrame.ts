@@ -1,7 +1,7 @@
 // A FrameView from a time and a few overrides. Returns one module-level object mutated in place, like the real
 // one, so a caller who needs two must copy values, and a layer that retains it is exposed. Imports no three.
 import {
-  CAMERA_Y, PHASE_COUNT, SIM_HZ, SPEED_CRUISE, SimMode,
+  CAMERA_Y, CamMode, PHASE_COUNT, SIM_HZ, SPEED_CRUISE, SimMode,
   type Ev, type FeelState, type FrameView, type HeroMode, type QualityProfile, type SimState, type Tier, type Travel, type WorldSource, type ZoneState,
 } from '../contracts/index';
 import { createBendState, createEventBuffer, createNeutralFeel, createZoneState } from '../core/alloc';
@@ -17,6 +17,8 @@ export interface ScriptedFrameOptions {
   bend?: { a: number; c: number }; feel?: Partial<FeelState>; sim?: Partial<SimState>;
   tier?: Tier; reducedMotion?: boolean; events?: readonly ScriptedEvent[]; world?: WorldSource;
   camX?: number; camY?: number;   // render-space; default as section 6.1 from sim.x and sim.y, with gain 0.72
+  /** T13. Default the chase camera: CHASE, 0, 0. The caller places `at`, camX and camY to match. */
+  cam?: { mode: CamMode; ahead: number; cockpitIn: number };
   /** Applied last, after palette, biome and hero. For testing crossfades and day phase. */
   zone?: Partial<Pick<ZoneState, 'index' | 'biomeA' | 'biomeB' | 'biomeMix' | 'heroA' | 'heroB' | 'heroMix' | 'dayPhase'>>;
 }
@@ -52,6 +54,7 @@ const bend = createBendState();
 const events = createEventBuffer();
 const view: FrameView = {
   dt: 0, tick: 0, alpha: 0, cam, camX: 0, camY: CAMERA_Y,
+  camMode: CamMode.CHASE, camAhead: 0, cockpitIn: 0,
   phases: new Float32Array(PHASE_COUNT), sim, feel, zone, bend, events, quality: PROFILES[3], reducedMotion: false,
 };
 
@@ -143,6 +146,9 @@ export function scriptedFrame(t: number, o: ScriptedFrameOptions = {}): FrameVie
 
   view.camX = o.camX ?? 0.72 * sim.x;
   view.camY = o.camY ?? CAMERA_Y + 0.35 * (sim.y - 6);
+  view.camMode = o.cam ? o.cam.mode : CamMode.CHASE;
+  view.camAhead = o.cam ? o.cam.ahead : 0;
+  view.cockpitIn = o.cam ? o.cam.cockpitIn : 0;
 
   events.count = 0;
   if (o.events) {

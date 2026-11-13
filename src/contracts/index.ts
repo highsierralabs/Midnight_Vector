@@ -136,7 +136,13 @@ export const ITEM_SPEC = [
 
 export const RenderOrder = {
   SKY: -1000, MIRROR: -500, PROP: 0, SHIP: 10, TERRAIN: 100, ADDITIVE: 200, SPEED_LINES: 210,
+  COCKPIT: 300,   // T13: the cockpit, drawn last, over additive draws and speed lines
 } as const;
+
+/** T13. The player's camera. DEMO always draws CHASE. */
+export const CamMode = { CHASE: 0, COCKPIT: 1, NOSE: 2 } as const;
+export type CamMode = (typeof CamMode)[keyof typeof CamMode];
+export const CAM_MODE_COUNT = 3;
 
 // ---- position ----
 /** chunk is integer-valued in [0, CHUNK_LIMIT); local is in [0, CHUNK_LEN). */
@@ -298,6 +304,9 @@ export interface FrameView {
   dt: number; tick: number; alpha: number;
   readonly cam: Travel;            // interpolated
   camX: number; camY: number;      // render-space; camera z is always 0
+  // T13. camMode: the camera in force, or being moved to. camAhead: how far cam sits ahead of the interpolated sim travel, in u,
+  // 0 in CHASE; the ship plane is at render-space z = -(SHIP_FORWARD - camAhead). cockpitIn: 0 to 1, how much of the cockpit is in.
+  camMode: CamMode; camAhead: number; cockpitIn: number;
   readonly phases: Float32Array;   // PHASE_COUNT
   readonly sim: Readonly<SimState>;
   readonly feel: Readonly<FeelState>;
@@ -415,6 +424,8 @@ export interface UiCommands {
   setQuality(t: Tier | 'auto'): void;
   setVolume(music: number, sfx: number): void;
   setReducedMotion(on: boolean): void;
+  /** T13. The player's camera from now on. Takes effect outside DEMO. */
+  setCamMode(m: CamMode): void;
 }
 export type FatalReason = 'no-webgl2' | 'context-lost-permanent' | 'shader-error' | 'runtime-error';
 /** mount(root): root is an empty element above the canvas, never transformed, and input attaches to the canvas itself. DOM hooks for tests, as data-mv values: title, launch, hud, km, sector, cruise, resume, signal-lost, context-lost, autopilot, reduced, quality, fatal, reload. <html data-mv-mode> is demo, play, cruise or lost. The UI writes no bests once warpSerial is non-zero. */
@@ -504,6 +515,8 @@ export interface HarnessHost {
   overrideFov(deg: number | null): void;
   /** Merged over feel.out in runFrame and over neutral feel in renderState; overrideFov wins on fovDeg. null clears. */
   overrideFeel(o: Partial<FeelState> | null): void;
+  /** T13. Forces the camera at once, with no move, in runFrame and renderState; null returns it to the player's choice. A host with one camera omits it. */
+  overrideCam?(m: CamMode | null): void;
 }
 
 // ---- composition root: each module exports only its factories, from its index.ts (src/render/fx has three, the rest one) ----

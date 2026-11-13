@@ -1,6 +1,8 @@
 // HarnessHost delegation, on the recording rig: each member reaches the live loop and overrides, per plan section 4.
 import { describe, expect, it } from 'vitest';
-import { CAMERA_PITCH, PALETTE_FLOATS, type RenderContext } from '../../../src/contracts/index';
+import { CAMERA_PITCH, CamMode, PALETTE_FLOATS, SHIP_FORWARD, type RenderContext } from '../../../src/contracts/index';
+import { between } from '../../../src/core/coords';
+import { FIRST_PERSON_ROLL } from '../../../src/app/cam';
 import { writePalette } from '../../../src/world/palettes';
 import { createHost } from '../../../src/app/host';
 import { createRig } from './fixtures/fakes';
@@ -136,5 +138,66 @@ describe('createHost', () => {
     host.governor.force(4);
     host.runFrame(1 / 60);
     expect(rig.view.quality.tier).toBe(4);
+  });
+});
+
+describe('createHost, T13: overrideCam', () => {
+  it('forces the camera at once in renderState and runFrame, and null gives the choice back', () => {
+    const { rig, host } = hostRig();
+    host.setManual(true);
+    host.overrideCam?.(CamMode.COCKPIT);
+    host.renderState(10, 0, 0);
+    expect([rig.view.camMode, rig.view.camAhead, rig.view.cockpitIn]).toEqual([CamMode.COCKPIT, SHIP_FORWARD, 1]);
+    expect(between(rig.view.cam, { chunk: 10, local: 0 })).toBe(SHIP_FORWARD);
+    host.runFrame(1 / 60);
+    expect([rig.view.camMode, rig.view.camAhead]).toEqual([CamMode.COCKPIT, SHIP_FORWARD]);
+    host.overrideCam?.(null);
+    host.runFrame(1 / 60);
+    expect(rig.view.camMode).toBe(CamMode.CHASE);
+  });
+
+  it('first person multiplies the roll of feel, an override of roll still wins, and chase hands feel through untouched', () => {
+    const { rig, host } = hostRig();
+    host.setManual(true);
+    (rig.feel.out as { roll: number }).roll = 0.01;
+    host.runFrame(1 / 60);
+    expect(rig.view.feel).toBe(rig.feel.out);
+    host.overrideCam?.(CamMode.NOSE);
+    host.runFrame(1 / 60);
+    expect(rig.view.feel.roll).toBeCloseTo(0.01 * FIRST_PERSON_ROLL, 15);
+    expect(rig.camera.rotation.z).toBeCloseTo(0.01 * FIRST_PERSON_ROLL, 15);
+    host.overrideFeel({ roll: 0 });
+    host.runFrame(1 / 60);
+    expect(rig.view.feel.roll).toBe(0);
+    host.overrideFeel(null);
+    host.overrideCam?.(CamMode.CHASE);
+    host.runFrame(1 / 60);
+    expect(rig.view.feel).toBe(rig.feel.out);
+  });
+});
+
+describe('T13: first person caps the field of view', () => {
+  it('feel’s field is capped at sizing.fovCapFirst in first person only, and the harness’s own override still wins', () => {
+    const { rig, host } = hostRig();
+    host.setManual(true);
+    (rig.deps.sizing as { fovCapFirst: number }).fovCapFirst = 66;
+    (rig.feel.out as { fovDeg: number }).fovDeg = 68;
+    host.runFrame(1 / 60);
+    expect(rig.view.feel.fovDeg).toBe(68);
+    host.overrideCam?.(CamMode.COCKPIT);
+    host.runFrame(1 / 60);
+    expect(rig.view.feel.fovDeg).toBe(66);
+    expect(rig.camera.fov).toBe(66);
+    host.overrideFeel({ fovDeg: 67.5 });
+    host.runFrame(1 / 60);
+    expect(rig.view.feel.fovDeg).toBe(66);
+    host.overrideFov(68);
+    host.runFrame(1 / 60);
+    expect(rig.view.feel.fovDeg).toBe(68);
+    host.overrideFov(null);
+    host.overrideFeel(null);
+    (rig.feel.out as { fovDeg: number }).fovDeg = 60;
+    host.runFrame(1 / 60);
+    expect(rig.view.feel.fovDeg).toBe(60);
   });
 });

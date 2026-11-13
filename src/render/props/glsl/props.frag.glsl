@@ -8,6 +8,7 @@ in float vMirY;
 #endif
 uniform int uLook;
 uniform float uBodyL, uEdgeL, uEdgeW, uGhost, uHazard, uReduced, uOrbFade;
+uniform float uGateOpen;                                 // T13: the ship's tail ahead of the camera, as in the vertex stage
 uniform ivec3 uTint;
 uniform vec3 uFlat;
 
@@ -321,9 +322,10 @@ void main() {
     vec2 dg = rd.xy / max(-rd.z, 1e-3) - HERO_C;
     float overDisc = 1. - smoothstep(HERO_R, HERO_R + .06, length(dg));
     // T11 r10: the verticals guide the ship only until it has threaded the gap. As the fence plane passes the ship's tail
-    // (SHIP_FORWARD 14 less SHIP_HALF_LENGTH 2.2 = 11.8; -vRel.z is the plane's depth) they fade, gone by 10 u, so a fence
-    // between the camera and the ship is no longer a full-height bar through sky and floor.
-    float threaded = smoothstep(10., 12.5, -vRel.z);
+    // (uGateOpen: SHIP_FORWARD 14 less SHIP_HALF_LENGTH 2.2 = 11.8 in chase; -vRel.z is the plane's depth) they fade, gone 1.8 u
+    // nearer, so a fence between the camera and the ship is no longer a full-height bar through sky and floor. T13: the two edges
+    // follow uGateOpen, and are 10 and 12.5 exactly at 11.8 in float32, as they were when they were literals.
+    float threaded = smoothstep(uGateOpen - 1.8, uGateOpen + .7, -vRel.z);
     c = emit(HAZARD_RED, (uEdgeL * s * (1. - .6 * overDisc) + .05) * nearFade) + emit(HAZARD_RED, 1.5) * gap * gapWide * threaded;
     lines = 0.;
   } else if (uLook == L_DRONE) {

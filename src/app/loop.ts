@@ -5,13 +5,14 @@
 import type { PerspectiveCamera } from 'three';
 import {
   CAMERA_FOV, CHUNK_LEN, SIM_HZ,
-  type AudioEngine, type ControlFrame, type FatalReason, type Feel, type FeelState, type Governor, type HeroMode, type InputSource,
+  type AudioEngine, type CamMode, type ControlFrame, type FatalReason, type Feel, type FeelState, type Governor, type HeroMode, type InputSource,
   type PostStack, type RenderLayer, type SharedUniforms, type Sim, type Travel, type Ui, type WorldSource,
 } from '../contracts/index';
 import { createNeutralFeel } from '../core/alloc';
 import { between } from '../core/coords';
 import { writePhases } from '../core/motion';
 import { writeCameraPose, writeSharedUniforms, type CameraPose } from '../core/uniforms';
+import { FIRST_PERSON_ROLL, moveCam, type CamState } from './cam';
 import { applyFeelOverride, copyFeel, writeCamAt, writeCamStep, type AppView } from './view';
 
 /** Harness overrides (HarnessHost). Persist across frames until cleared, and apply in every entry point. */
@@ -21,9 +22,11 @@ export interface Overrides {
   bend: { a: number; c: number } | null;
   fov: number | null;
   feel: Partial<FeelState> | null;
+  /** T13: the camera, at once and with no move. */
+  cam: CamMode | null;
 }
 export function createOverrides(): Overrides {
-  return { zone: null, bend: null, fov: null, feel: null };
+  return { zone: null, bend: null, fov: null, feel: null, cam: null };
 }
 
 /** Shared with lifecycle.ts. tierHeld: a tier change arrived while the context was lost, applied once it is live. */
@@ -40,6 +43,8 @@ export function createCounters(): LoopCounters {
 /** What the loop needs of sizing.ts. */
 export interface LoopSizing {
   readonly gainX: number;
+  /** T13: first person's cap on the field of view at the current aspect, in degrees. */
+  readonly fovCapFirst: number;
   applyIfDirty(camera: PerspectiveCamera, post: PostStack): boolean;
 }
 
@@ -50,6 +55,8 @@ export interface LoopDeps {
   /** Property read each frame: renderer.info is a new object after a restore (section 10.2). */
   renderer: { readonly info: { reset(): void } };
   camera: PerspectiveCamera; shared: SharedUniforms; sizing: LoopSizing; view: AppView; control: ControlFrame;
+  /** T13: the player's camera, moved in step 5. */
+  cam: CamState;
   flags: LoopFlags;
   overrides: Overrides;
   counters: LoopCounters;
@@ -141,16 +148,26 @@ export function createLoop(d: LoopDeps): Loop {
     }
   }
 
-  /** End of step 8: view.feel is base, or the scratch filled from base, the feel override, then the fov override. */
+  /**
+   * End of step 8: view.feel is base, or the scratch filled from base, first person's roll gain (T13: base roll times
+   * FIRST_PERSON_ROLL once the eye is on the ship), the feel override, first person's cap on the field of view (T13,
+   * follow.ts), then the fov override, which is the harness's own and wins.
+   */
   function pointFeel(base: Readonly<FeelState>): void {
     const of = d.overrides.feel;
     const ov = d.overrides.fov;
-    if (of === null && ov === null) {
+    const eye = d.cam.eye;
+    if (of === null && ov === null && eye === 0) {
       view.feel = base;
       return;
     }
     copyFeel(base, feelScratch);
+    if (eye > 0) feelScratch.roll *= 1 + (FIRST_PERSON_ROLL - 1) * eye;
     if (of !== null) applyFeelOverride(of, feelScratch);
+    if (eye > 0) {
+      const cap = d.sizing.fovCapFirst;
+      if (feelScratch.fovDeg > cap) feelScratch.fovDeg = cap;
+    }
     if (ov !== null) feelScratch.fovDeg = ov;
     view.feel = feelScratch;
   }
@@ -243,6 +260,7 @@ export function createLoop(d: LoopDeps): Loop {
   /** Steps 5 to 15 after a step, shared by onFrame and runFrame, at st.dt. */
   function body(): void {
     writeCamStep(view, state, st, d.sizing);
+    moveCam(d.cam, view, state, d.overrides.cam, st, false);
     view.dt = st.dt;
     writePhases(view.tick, view.alpha, view.phases);
     zoneStep();
@@ -302,6 +320,7 @@ export function createLoop(d: LoopDeps): Loop {
       view.cam.local = local;
       view.tick = tick;
       writeCamAt(view, state, d.sizing);
+      moveCam(d.cam, view, state, d.overrides.cam, st, true);
       writePhases(tick, 0, view.phases);
       zoneStep();
       pointFeel(d.neutralFeel);
@@ -347,6 +366,7 @@ export function createLoop(d: LoopDeps): Loop {
     renderState,
     prepare() {
       writeCamStep(view, state, st, d.sizing);
+      moveCam(d.cam, view, state, d.overrides.cam, st, false);
       view.dt = 0;
       writePhases(view.tick, view.alpha, view.phases);
       zoneStep();

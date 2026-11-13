@@ -133,6 +133,8 @@ onFrame(nowMs):
   5  alpha = acc * 120
      copy sim.state.travel into view.cam; advance(view.cam, -(1 - alpha) * state.stepDist)
      view.camX, view.camY = lerp(prev, cur, alpha) * follow gains
+     T13: move view.camAhead toward the camera in force; advance(view.cam, camAhead);
+          view.camX, view.camY onto the ship by min(1, camAhead / SHIP_FORWARD); write view.camMode, view.cockpitIn
   6  for each phase i: view.phases[i] = ((tick % PERIOD[i]) + alpha) / PERIOD[i]
   7  world.zoneAt(view.cam, zone); world.bendAt(view.cam, bend)
   8  feel.update(dt, state, events, reducedMotion)
@@ -402,6 +404,7 @@ That holds only at normal cruise and only until the first speed change, because 
 - **OutRun bend:** in every scene vertex shader, on render-space positions before the view matrix: `bendV` in §8.2. Fog direction and distance use the bent position, so far geometry still matches the sky. It is geometrically false, so everything sets `frustumCulled = false` (§6.5 pays that cost explicitly).
 - **Mountain V:** valley floor exactly y = 0 for |x| < 85, rising per §5.2.
 - **Follow:** camera x = gain * ship x, camera y = 7 + 0.15 * (ship y - 6) [A] (.35 until DI-118: with the swooping lane the camera rose with the ship and the far terrain sparkled past S1far's limit). The gain keeps the whole ship, wing tips included, inside .85 of the half-width at the lane walls: `followGainX` in `src/app`, `max(.72, 1 - (.85 tan(29°) aspect (SHIP_FORWARD - SHIP_HALF_LENGTH) - SHIP_HALF_WIDTH) / PLAY_HALF_X)`. That is .793 at 16:9, .976 at 390x844, and .72 from aspect 2.30 up [arithmetic: T10, DI-88]. Dev frames keep 0.72.
+- **Cameras (T13):** the above is the chase camera, the default and the only one the title uses. The player may also choose the cockpit or the nose (§7.3). First person moves the view origin, not the camera: `FrameView.cam` sits `camAhead` ahead of the sim's travel, 14 u for the cockpit, so the ship plane is the camera plane, and 16.2 u for the nose, the ship's nose tip, and `camX` and `camY` sit on the ship, .5 u above its centre line in the cockpit and .05 u on the nose. The camera itself stays at render-space z = 0, so §4 and every shader's position maths are untouched. A change of camera moves `camAhead` over a few frames: forward at 40 u/s, and backward by at most .9 of the frame's travel, so the view origin never moves backward and no layer rebuilds (`src/app/cam.ts`). Roll is feel's own bank times 3 in first person, .15 rad at most, and 0 under reduced motion as before. The field of view has a cap of its own in first person (§6.4). The props layer reads `camAhead` for the ship plane's depth: the ship's two draws show only while the camera is 6 u or more behind it, a gate opens only once the ship's tail has passed it, and a spent pickup shrinks over its last 9 u in first person, where a drone stays whole until 3 u. With `camAhead` 0 every such value is what it was before T13. The cockpit is one flat mesh in cockpit units of the stage (`src/core/cockpit.ts`: one unit is `min(height, width / 1.6)`), fixed to the eye, drawn last with no depth test (§6.9): a dashboard, two instrument panels, canopy struts, and a wheel with the pilot's hands and forearms. The wheel takes the ship's own bank and pitch, so it turns with the ship and comes back as it climbs. The art gates of §11.5 are defined on the chase camera; T13 measures the other two and reports them.
 
 ### 6.2 Shared shader code
 
@@ -471,7 +474,7 @@ At stride 2 a level's 2s mesh meets its parent's 4s mesh in the overlap, which m
 | 68 (boost and gate pulse) | 0 | 4396 | .997 |
 | 68 | -28.8 (full follow) | 4366 | .994 |
 
-So **`FOG_END = 4300`**, with `FOG_START = 1500`, measured on the post-bend radial distance. Feel caps FOV at `CAMERA_FOV_MAX = 68`. Wider than 21:9 the bound would fail: 32:9 reaches 4211 at camera x 0 [arithmetic: T03], and the 4183 first quoted here may include full follow. So `app/` sets `fov = min(feel.fovDeg, 2 * atan(CAMERA_HALF_TAN_MAX / aspect))`, which holds the horizontal half-tangent at the 21:9 value. The art prototype's 1800 to 6100 looked good but had a different far edge; T11 may lower these values by amendment (§8), and never raise them, because the worst inner edge of a boundary cell is at radial 4300.5 u [arithmetic: T03]. T03 proves the bound with a boundary-paint render at 21:9, maximum bend and FOV 68.
+So **`FOG_END = 4300`**, with `FOG_START = 1500`, measured on the post-bend radial distance. Feel caps FOV at `CAMERA_FOV_MAX = 68`. Wider than 21:9 the bound would fail: 32:9 reaches 4211 at camera x 0 [arithmetic: T03], and the 4183 first quoted here may include full follow. So `app/` sets `fov = min(feel.fovDeg, 2 * atan(CAMERA_HALF_TAN_MAX / aspect))`, which holds the horizontal half-tangent at the 21:9 value. In first person (T13, §6.1) the camera is on the ship, out to x 40 at the lane wall, which this bound was not drawn for: at 21:9, FOV 68 and full bend, 207 to 313 of about 185,000 painted boundary pixels kept less than full fog, and at 67 none did [O: T13's edge paint, `tests/views/measure.spec.ts`]. So in first person `app/` also caps feel's field at `2 * atan(1.515 / aspect)`, 66 degrees at 21:9, which bites only on a stage wider than about 2.25:1. The art prototype's 1800 to 6100 looked good but had a different far edge; T11 may lower these values by amendment (§8), and never raise them, because the worst inner edge of a boundary cell is at radial 4300.5 u [arithmetic: T03]. T03 proves the bound with a boundary-paint render at 21:9, maximum bend and FOV 68.
 
 **Floor and mountain shading** (from the art prototype, rendered [O]):
 
@@ -651,6 +654,7 @@ Terrain is in three's transparent list, so it always draws after every opaque ob
 | 100 + level | Terrain, finest first, so coarse overlap fails the depth test and never double-blends | Transparent |
 | 200 | Beams, searchlights, additive, no depth write | Transparent |
 | 210 | Speed lines | Transparent |
+| 300 | The cockpit (T13), no depth test, its triangles in painter's order | Transparent |
 
 ### 6.10 Quality tiers
 
@@ -726,7 +730,7 @@ Pause is CRUISE. **There is no true pause: R1 wins, and a player cannot freeze t
 
 | Device | Mapping |
 |---|---|
-| Keyboard | WASD or arrows rate-steer, Space boost, Esc or P cruise, M mute. In fullscreen Esc is the browser's: it leaves fullscreen, and from PLAY the UI then opens CRUISE |
+| Keyboard | WASD or arrows rate-steer, Space boost, Esc or P cruise, M mute, C the next camera (chase, cockpit, nose; T13; the cruise menu has a button for it, the only way on a touch screen). In fullscreen Esc is the browser's: it leaves fullscreen, and from PLAY the UI then opens CRUISE |
 | Mouse (Pointer Events) | Position is an absolute target, left button boosts |
 | Touch (Pointer Events) | One-finger relative drag, second finger or on-screen button boosts, `touch-action: none` |
 | Gamepad | Out of v1 |
@@ -748,6 +752,8 @@ One `step()` path serves player, autopilot and tests. Autopilot produces a `Cont
 ### 7.5 HUD
 
 DOM over the canvas with system fonts only: score, SYNC, shield pips, overdrive, km, sector, objective, in `"Courier New", ui-monospace, monospace`. The chrome wordmark uses a heavy system stack by CSS gradient clip, one CSS token, because Courier's thin strokes carry the chrome band poorly [O: T08 mock, one reviewer, stills]. Phone fallbacks are untested [M]. Text is written only on change, and bars move by `transform`. A gate counts DOM writes per second: 0 idle, at most 24 at cruise, 60 on boost, 300 adversarial [A]. It counts with a `MutationObserver` plus a `setProperty` wrapper, because an observer gives 0 records for `style.transform`, `setProperty` and custom properties [O: T08 rehearsal].
+
+In the cockpit view (T13) the same readouts sit on the dashboard's two instrument panels instead of at the screen's edges: score and SYNC over shields and overdrive on the left, distance, sector and objective on the right. Nothing is written per frame for this: the UI sets `data-dash` when the frame's `cockpitIn` reaches 1, and the stylesheet places each box on its slot from `src/core/cockpit.ts`, in cockpit units through one custom property written on resize. The scene draws the panels from the same numbers, so the two cannot drift, and the write gate's limits hold unchanged. II moves to the top corner. HIDE HUD hides the readouts and leaves the dashboard.
 
 ### 7.6 Audio
 
@@ -907,7 +913,13 @@ export const ITEM_SPEC = [
 
 export const RenderOrder = {
   SKY: -1000, MIRROR: -500, PROP: 0, SHIP: 10, TERRAIN: 100, ADDITIVE: 200, SPEED_LINES: 210,
+  COCKPIT: 300,   // T13: the cockpit, drawn last, over additive draws and speed lines
 } as const;
+
+/** T13. The player's camera. DEMO always draws CHASE. */
+export const CamMode = { CHASE: 0, COCKPIT: 1, NOSE: 2 } as const;
+export type CamMode = (typeof CamMode)[keyof typeof CamMode];
+export const CAM_MODE_COUNT = 3;
 
 // ---- position ----
 /** chunk is integer-valued in [0, CHUNK_LIMIT); local is in [0, CHUNK_LEN). */
@@ -1069,6 +1081,9 @@ export interface FrameView {
   dt: number; tick: number; alpha: number;
   readonly cam: Travel;            // interpolated
   camX: number; camY: number;      // render-space; camera z is always 0
+  // T13. camMode: the camera in force, or being moved to. camAhead: how far cam sits ahead of the interpolated sim travel, in u,
+  // 0 in CHASE; the ship plane is at render-space z = -(SHIP_FORWARD - camAhead). cockpitIn: 0 to 1, how much of the cockpit is in.
+  camMode: CamMode; camAhead: number; cockpitIn: number;
   readonly phases: Float32Array;   // PHASE_COUNT
   readonly sim: Readonly<SimState>;
   readonly feel: Readonly<FeelState>;
@@ -1186,6 +1201,8 @@ export interface UiCommands {
   setQuality(t: Tier | 'auto'): void;
   setVolume(music: number, sfx: number): void;
   setReducedMotion(on: boolean): void;
+  /** T13. The player's camera from now on. Takes effect outside DEMO. */
+  setCamMode(m: CamMode): void;
 }
 export type FatalReason = 'no-webgl2' | 'context-lost-permanent' | 'shader-error' | 'runtime-error';
 /** mount(root): root is an empty element above the canvas, never transformed, and input attaches to the canvas itself. DOM hooks for tests, as data-mv values: title, launch, hud, km, sector, cruise, resume, signal-lost, context-lost, autopilot, reduced, quality, fatal, reload. <html data-mv-mode> is demo, play, cruise or lost. The UI writes no bests once warpSerial is non-zero. */
@@ -1275,6 +1292,8 @@ export interface HarnessHost {
   overrideFov(deg: number | null): void;
   /** Merged over feel.out in runFrame and over neutral feel in renderState; overrideFov wins on fovDeg. null clears. */
   overrideFeel(o: Partial<FeelState> | null): void;
+  /** T13. Forces the camera at once, with no move, in runFrame and renderState; null returns it to the player's choice. A host with one camera omits it. */
+  overrideCam?(m: CamMode | null): void;
 }
 
 // ---- composition root: each module exports only its factories, from its index.ts (src/render/fx has three, the rest one) ----
@@ -1388,6 +1407,7 @@ export interface ScriptedFrameOptions {
   bend?: { a: number; c: number }; feel?: Partial<FeelState>; sim?: Partial<SimState>;
   tier?: Tier; reducedMotion?: boolean; events?: readonly ScriptedEvent[]; world?: WorldSource;
   camX?: number; camY?: number;   // render-space; default as §6.1 from sim.x and sim.y, with gain 0.72
+  cam?: { mode: CamMode; ahead: number; cockpitIn: number };   // T13; default the chase camera: CHASE, 0, 0
   /** Applied last, after palette, biome and hero. For testing crossfades and day phase. */
   zone?: Partial<Pick<ZoneState, 'index' | 'biomeA' | 'biomeB' | 'biomeMix' | 'heroA' | 'heroB' | 'heroMix' | 'dayPhase'>>;
 }
@@ -1557,7 +1577,7 @@ So in software, vertices dominate [I]. Tiers must cut vertices, not only pixels.
 | Layer `frame()` plus uniforms | at most 1 ms | [A] |
 | UI plus audio scheduling | at most 0.5 ms | [A] |
 | Warp or full refill | at most 30 ms, once | 16 to 20 ms [O] |
-| Draw calls, tier 3 | at most 68 | Worst case 64 [arithmetic]: sky 1, nebula 1, terrain 6, rings 26, beams 2 (saucer and laser fence mix opaque and additive, §6.9), mirror 12, ship 2, lines 1, post 13 [O: T06 review probe, 2 * 6 + 1] |
+| Draw calls, tier 3 | at most 68 | Worst case 64 [arithmetic]: sky 1, nebula 1, terrain 6, rings 26, beams 2 (saucer and laser fence mix opaque and additive, §6.9), mirror 12, ship 2, lines 1, post 13 [O: T06 review probe, 2 * 6 + 1]. T13: the cockpit view draws the cockpit's 1 in place of the ship's 2, and the nose view draws neither, so no camera exceeds the chase count [O: 45, 44 and 43 calls on one tier-3 scene] |
 | Triangles, tier 3 | at most 1.5M | Worst case about 650k [arithmetic] |
 | Tier 0 on SwiftShader | at most 50 ms (20 fps) | [A]. 60 fps is not promised in software. Not divided between layers; the sky alone took 16.9 ms at 640x360 with no post [O: T04 rehearsal]. If the integrated build misses at T10, T03's `NO_SUN_COLUMN` and T04's `HERO_SUN_ONLY` compile the extras out, at the cost of a plain sun in software |
 | Allocation in our hot paths | **zero** per frame in what our code asks for | Gated per URL class on the real build by the sampling profiler plus `usedJSHeapSize` windows (T09): project code outside `src/world` at most 512 B/frame [A; was 128 B, loosened by DI-78 after the app measured 296 to 377], `src/world` at most 20 KB/frame [A], libraries at most 32 KB/frame [A] |
@@ -1779,6 +1799,7 @@ Sync and timer query both track the load, about 0.4 ms apart. **rAF delta with v
 | **T10** | Integration: composition root, loop, lifecycle, boot, fallback page, e2e | `index.html`, `src/main.ts`, `src/app/**`, `tests/e2e/**`, `tests/unit/app/**`, `plans/T10-integrate.md` | T01-T09 | `plans/T10-integrate.md` |
 | **T11** | Art pass: tune across modules, all gates green, operator review | Temporarily `src/render/**`, `src/world/palettes.ts`, `src/world/biomes.ts`, `src/contracts/glsl/hero.glsl`, `src/feel/tuning.ts`, `src/sim/tuning.ts`; permanently `tests/art/**`, `plans/T11-art-pass.md` | T10 | `plans/T11-art-pass.md` |
 | **T12** | Public release: README, licence, third-party notices, contributing guide, screenshots, GitHub Pages workflow | `README.md`, `LICENSE`, `THIRD-PARTY-NOTICES.md`, `CONTRIBUTING.md`, `docs/screenshots/**`, `.github/**`, `plans/T12-release.md` | T10 | `plans/T12-release.md` |
+| **T13** | Camera views: a cockpit view with a dashboard, wheel and arms, and a nose camera. It owns its acceptance specs; the code is in T00's, T05's, T08's and T10's paths and goes through their plans | `tests/views/**`, `plans/T13-views.md` | T10, T11 | `plans/T13-views.md` |
 
 Parallelism:
 
@@ -1788,6 +1809,7 @@ T00 (serial, first)
       |-> T10 (serial)
            |-> T11 (serial; nothing else writes while it runs)
            |-> T12 (release files and deploy only; no path in T11's window)
+           |-> T13 (camera views, after T11; code through the owners' plans)
 ```
 
 - T03 to T06 get screenshots before integration through `dev/*.html` and `startDevShell`, using `createFakeWorld()`.
@@ -1803,6 +1825,7 @@ Definition of done for every task: its plan's acceptance list passes, `npm run c
 | Decision | Source | Rejected, and why |
 |---|---|---|
 | **Ribbon addressed by integer chunks, no rebase** | Infinity | 2D chunk grid and pool: adds queues and bursts a forward-only world doesn't need. Discrete floating-origin rebase: a cross-system event that can pop |
+| **First person moves the view origin, not the camera (T13)** | The operator's request for a cockpit view and a nose camera, 2026-11-12 | Moving the camera to the ship: the props and ship programs subtract `vec3(cameraPosition.xy, 0.)` and the GLSL gate bans `cameraPosition.z`, so every near fade and fog distance would be 14 u off. A cockpit in a layer of its own: render siblings may not import each other, and the mesh builder and line shader it needs are the props layer's. Readouts drawn in the scene: there is no text in the scene to build on |
 | **One-axis clipmap on a height ring, 6 levels** | Infinity's mechanism, extended to 6 levels to keep the art prototype's 6 km reach. Tested at final design stage: +19k tris, identity and cracks still 0 [O] | Art's 24 chunk meshes of 1.12M tris: more vertices, which SwiftShader shows is what costs, plus chunk upload bursts. Skirts: grid lines would need excluding, and overlap plus morph measured 0 cracks |
 | **T = 4096 period rule** | Art | Infinity's 64 u limit: too short for pulses and ripple. Combined with Infinity's exact `chunk` arithmetic |
 | **Tick-derived phases with no accumulator** | New, replacing all three proposals' phase schemes | Art's `(t/period)%1`, Infinity's `phase += dt/P`, Game's `uLoop`: all drift or depend on dt. Integer-tick phases are exact and let one call reproduce a frame |
