@@ -51,20 +51,29 @@ const HUB_X = COCKPIT_HUB.x;
 const HUB_Y = COCKPIT_HUB.y;
 
 /**
- * The right hand's own frame, for the gloves: its origin is the middle of the back of the hand, s runs from the wrist to
- * the knuckles, which is inward and a little up, across the grip, and t runs from the thumb's side to the little finger's.
- * (s, t) is right-handed, so a face given counter-clockwise in it stays counter-clockwise. The left hand is the mirror.
+ * The right grip's own frame, for the gloves: its origin is on the grip's centre line at the middle of the hand, u runs
+ * outward, away from the hub, and v runs up the grip, which is canted. (u, v) is right-handed, so a face given
+ * counter-clockwise in it stays counter-clockwise. The grip is GRIP_HALF wide each side of u = 0. The left hand is the mirror.
  */
-const HAND_O: readonly [number, number] = [0.166, HUB_Y + 0.026];
-const HAND_S: readonly [number, number] = [-0.92, 0.39];
-const HAND_T: readonly [number, number] = [-0.39, -0.92];
-/** The knuckles' line, half the hand's width there, and how far each finger's first joint shows beyond it, forefinger first. */
-const KNUCKLE_S = 0.022;
-const HAND_HALF = 0.036;
-const FINGER_LEN: readonly number[] = [0.019, 0.022, 0.02, 0.016];
-const hp = (s: number, t: number): readonly [number, number] => [
-  HAND_O[0] + s * HAND_S[0] + t * HAND_T[0], HAND_O[1] + s * HAND_S[1] + t * HAND_T[1],
+const GRIP_O: readonly [number, number] = [0.157, HUB_Y + 0.036];
+const GRIP_OUT: readonly [number, number] = [0.996, -0.088];
+const GRIP_UP: readonly [number, number] = [0.088, 0.996];
+const gp = (u: number, v: number): readonly [number, number] => [
+  GRIP_O[0] + u * GRIP_OUT[0] + v * GRIP_UP[0], GRIP_O[1] + u * GRIP_OUT[1] + v * GRIP_UP[1],
 ];
+/** From the right wrist toward its elbow, which is below and outside the frame. */
+const ARM: readonly [number, number] = [0.727, -0.687];
+const along = (q: readonly [number, number], d: number): readonly [number, number] => [q[0] + d * ARM[0], q[1] + d * ARM[1]];
+/** The wrist's two ends, where the heel of the hand meets the cuff. */
+const WRIST_HI = gp(0.053, 0.008);
+const WRIST_LO = gp(0.043, -0.034);
+/** The four fingers, little finger first: the foot of each, and how far its bend stands inside the grip's inner edge. */
+const FINGER_STEP = 0.016;
+const FINGER_FOOT = -0.042;
+const FINGER_BEND: readonly number[] = [-0.024, -0.029, -0.03, -0.027];
+/** A fingertip rests this far down the grip from its bend, and this far across the grip's near side. */
+const FINGER_DROOP = 0.005;
+const FINGER_TIP = 0.008;
 
 const p = (x: number, y: number): V3 => [x, y, 0];
 
@@ -159,32 +168,38 @@ export function buildCockpit(): BuiltMesh {
   // The wheel: a crossbar, two grips canted outward at the top, and a six-sided boss on the hub. rig 1.
   const rig: FaceOpts = { part: P.WHEEL, param: 1 };
   quad(b, [[HUB_X - 0.15, HUB_Y - 0.014], [HUB_X + 0.15, HUB_Y - 0.014], [HUB_X + 0.15, HUB_Y + 0.014], [HUB_X - 0.15, HUB_Y + 0.014]], { ...rig, edges: 5 });
-  pair(b, [[0.134, HUB_Y - 0.03], [0.166, HUB_Y - 0.03], [0.182, HUB_Y + 0.09], [0.146, HUB_Y + 0.09]], { ...rig, edges: 15 });
+  pair(b, [[0.138, HUB_Y - 0.03], [0.164, HUB_Y - 0.03], [0.177, HUB_Y + 0.105], [0.149, HUB_Y + 0.105]], { ...rig, edges: 15 });
   for (let i = 0; i < 6; i++) {
     const a0 = (Math.PI * 2 * i) / 6;
     const a1 = (Math.PI * 2 * (i + 1)) / 6;
     b.tri(p(HUB_X, HUB_Y), p(HUB_X + 0.036 * Math.cos(a0), HUB_Y + 0.036 * Math.sin(a0)), p(HUB_X + 0.036 * Math.cos(a1), HUB_Y + 0.036 * Math.sin(a1)), { ...rig, edges: 2 });
   }
 
-  // Forearms: the elbow end stays, below and outside the frame, and the wrist end moves with the wheel.
-  pair(b, [[0.36, -0.1], [0.5, -0.06], hp(-0.046, -0.029), hp(-0.046, 0.029)], { part: P.SLEEVE, edges: 10, param: [0, 0, 1, 1] });
+  // Forearms: the elbow end stays, below and outside the frame, and the wrist end moves with the wheel, inside the cuff.
+  pair(b, [[0.36, -0.1], [0.5, -0.06], along(WRIST_HI, 0.007), along(WRIST_LO, 0.007)], { part: P.SLEEVE, edges: 10, param: [0, 0, 1, 1] });
 
-  // Gloves, seen as the pilot sees them: the back of each hand, laid across its grip, with the fingers going away round the
-  // grip's inner side. A cuff at the wrist, the back of the hand with a pad on it, four knuckles and the first joint of each
-  // finger beyond them, and the thumb along the top. rig 1. Each face is given in the hand's own frame (hp).
+  // Gloves, as the pilot sees a fist on an upright grip (the operator's reference photos, plans/T13-views.md R-22): the
+  // thumb's side of the hand faces the eye and the back of the hand faces outward. The forearm arrives from below and
+  // outside. The heel of the hand and the ball of the thumb lie against the grip's outer half; the four fingers go round
+  // behind the grip and their tips come back into sight on its inner side, stacked, pointing at the palm; and the thumb
+  // crosses the near side of the grip above them. The grip shows above the thumb and below the little finger. rig 1.
+  // Order: cuff, palm, fingers, thumb. Each face is given in the grip's own frame (gp).
   const glove: FaceOpts = { part: P.GLOVE, param: 1 };
-  pair(b, [hp(-0.05, -0.034), hp(-0.034, -0.034), hp(-0.034, 0.034), hp(-0.05, 0.034)], { ...glove, edges: 15 });
-  pair(b, [hp(-0.034, -0.03), hp(KNUCKLE_S, -HAND_HALF), hp(KNUCKLE_S, HAND_HALF), hp(-0.034, 0.03)], { ...glove, edges: 10 });
-  pair(b, [hp(-0.024, -0.014), hp(0.008, -0.02), hp(0.008, 0.02), hp(-0.024, 0.014)], { ...glove, edges: 15 });
-  const fingers = 4;
-  const width = (2 * HAND_HALF) / fingers;
-  for (let i = 0; i < fingers; i++) {
-    const t0 = -HAND_HALF + i * width;
-    const t1 = t0 + width;
-    const tip = KNUCKLE_S + FINGER_LEN[i]!;
-    pair(b, [hp(KNUCKLE_S, t0), hp(tip, t0 + 0.002), hp(tip, t1 - 0.002), hp(KNUCKLE_S, t1)], { ...glove, edges: 15 });
+  pair(b, [WRIST_LO, along(WRIST_LO, 0.014), along(WRIST_HI, 0.014), WRIST_HI], { ...glove, edges: 15 });
+  // The palm, thumb side on: from the wrist to the grip. Two quads; the wrist edge and the seam between them carry no line.
+  pair(b, [gp(0.004, -0.047), gp(0.044, -0.03), gp(0.052, 0.004), gp(0.002, 0.024)], { ...glove, edges: 9 });
+  pair(b, [gp(0.002, 0.024), gp(0.052, 0.004), gp(0.04, 0.026), gp(0.02, 0.032)], { ...glove, edges: 14 });
+  // The fingertips, come round from behind: each from its bend, inside the grip's inner edge, to its tip, which rests on
+  // the palm a little lower. They lie against each other, so each carries one line between it and the next, not two.
+  for (let i = 0; i < FINGER_BEND.length; i++) {
+    const v0 = FINGER_FOOT + i * FINGER_STEP;
+    const v1 = v0 + FINGER_STEP;
+    const bend = FINGER_BEND[i]!;
+    pair(b, [gp(bend, v0), gp(FINGER_TIP, v0 - FINGER_DROOP), gp(FINGER_TIP, v1 - FINGER_DROOP), gp(bend, v1)], { ...glove, edges: i === 0 ? 15 : 14 });
   }
-  pair(b, [hp(-0.03, -0.029), hp(-0.016, -0.05), hp(0.03, -0.052), hp(0.02, -0.035)], { ...glove, edges: 15 });
+  // The thumb: from the ball of the thumb, across the near side of the grip, to its tip inside the grip's inner edge.
+  pair(b, [gp(0.034, 0.014), gp(0.042, 0.03), gp(-0.008, 0.046), gp(-0.012, 0.027)], { ...glove, edges: 11 });
+  pair(b, [gp(-0.012, 0.027), gp(-0.008, 0.046), gp(-0.031, 0.038), gp(-0.034, 0.019)], { ...glove, edges: 13 });
 
   return b.finish();
 }

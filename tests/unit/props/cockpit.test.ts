@@ -171,7 +171,7 @@ describe('buildCockpit', () => {
     }
   });
 
-  it('each glove shows the back of the hand: the wrist outside its grip, the fingers going round the grip\'s inner side', () => {
+  it('each glove is a fist seen thumb side on: the wrist and palm outside its grip, the fingertips and the thumb\'s tip inside it', () => {
     // The right grip at rest, from the mesh: the wheel's vertices right of the crossbar's end.
     const hy = COCKPIT_HUB.y;
     let gripIn = Infinity, gripOut = -Infinity;
@@ -188,13 +188,15 @@ describe('buildCockpit', () => {
     }
     expect(handIn).toBeLessThan(gripIn);
     expect(handOut).toBeGreaterThan(gripOut + 0.02);
-    // The grip shows above and below the hand, so the hand is seen to hold something.
+    // The grip shows above the thumb and below the little finger, as a rod held in a fist does.
     let gripLow = Infinity, gripHigh = -Infinity;
     for (let i = 0; i < count; i++) {
       if (partOf(i) !== CockpitPart.WHEEL || mesh.position[i * 3]! < 0.13) continue;
       gripLow = Math.min(gripLow, mesh.position[i * 3 + 1]!); gripHigh = Math.max(gripHigh, mesh.position[i * 3 + 1]!);
     }
     expect(gripHigh).toBeGreaterThan(hy + 0.085);
+    expect(gripHigh - high).toBeGreaterThan(0.015);
+    expect(low - gripLow).toBeGreaterThan(0.015);
     expect(gripLow).toBeLessThan(low + 0.02);
     expect(high - low).toBeLessThan(0.12);
   });
