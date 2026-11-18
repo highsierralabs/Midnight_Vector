@@ -67,6 +67,28 @@ export const LIMITS = {
 
 export type GateId = keyof typeof LIMITS;
 
+/**
+ * DI-124 (amendment OA). O1's red at these ten pairs was accepted by the operator as the swoop's cost (DI-118, 2026-11-08:
+ * "Keep the swoop"): the floating rings and the shard trail rise above the camera and cross the disc's lower part. At
+ * ART_SEED with all five samples per pair, each is held at the value it read at rounds `a26` and `dev` (identical on all
+ * 180 samples), the least occluded of five as O1 reads it, and may rise by at most O1_ACCEPTED_RISE. Every other non-canyon
+ * pair keeps O1's .15. A pair that falls under .15 may rise again to its accepted value.
+ */
+export const O1_ACCEPTED: Readonly<Record<string, number>> = {
+  p0b4: 0.185769, // Sunset Drive / Orbital Night
+  p0b5: 0.181916, // Sunset Drive / Olympus
+  p1b2: 0.177976, // Miami Dusk / Crystal Desert
+  p2b5: 0.166329, // Ultraviolet / Olympus
+  p3b0: 0.211724, // Toxic Arcade / Boulevard
+  p3b5: 0.222072, // Toxic Arcade / Olympus
+  p4b1: 0.158147, // Ember / Neon City
+  p4b2: 0.159911, // Ember / Crystal Desert
+  p4b5: 0.180108, // Ember / Olympus
+  p5b0: 0.150256, // Arctic Laser / Boulevard
+};
+/** DI-124: the largest rise over an accepted O1 value, as a share of the disc. O1 has read identical per sample in every round since `op1b`. */
+export const O1_ACCEPTED_RISE = 0.005;
+
 /** True when value passes the limit. NaN never passes. */
 export function passes(id: GateId, value: number): boolean {
   const l: Limit = LIMITS[id];

@@ -1770,6 +1770,13 @@ The sentence now names three costs:
 - **A seam, recorded.** The grille is mixed in linear light, before the last pass encodes to sRGB, as in the City; a measurement on final 8-bit pixels therefore sees about half its linear depth (.088 against .17). Gates on the CRT frame are written in encoded units.
 - **Not decided here.** Whether the look is right on the operator's monitor and phone: T14's HC-C1 and HC-C2.
 
+**DI-124. O1's accepted red made a gate: ten pairs held at the value the operator accepted with the swoop (T11 amendment OA).**
+- **Source.** The operator, 2026-11-18, choosing option 1 of three (lock the check at the accepted level; fix the look; leave it red), verbatim: "Proceed with option one." The red itself was accepted on 2026-11-08 with DI-118: "Keep the swoop", O1's sun red the swoop's cost (T11 Progress, 16:40Z).
+- **Why.** From round `op1b` on, `sheet36` exited 1 on O1 at every run (.2221 against .15, 10 of 30 pairs), with the cause accepted and the gate unchanged, so a new rise in O1 would read as the accepted red. Per-sample O1 at round `a26` (2026-11-08) and `dev` (2026-11-17, after T12 and T13) is identical on all 180 samples, so the ten values are stable.
+- **Changed, in T11's paths (amendment OA).** `tests/art/support/thresholds.ts` gains `O1_ACCEPTED` (the ten pairs and their values) and `O1_ACCEPTED_RISE` (.005). `tests/art/sheet36.spec.ts`: at `ART_SEED` with five samples per pair, O1 at .15 gates the other twenty pairs; a new gated row `O1accepted` reads each accepted pair's rise over its value; `O1all`, report-only, prints the old rule on all thirty; a full run asserts that all ten are measured. At other seeds and in tiles-only runs, O1 is as before. The T00 owner: `architecture.md` §14's art-gate sentence.
+- **What it gives up.** A pair on the list may now sit up to .227 without failing, and one that falls under .15 may rise again to its accepted value without failing. The accepted occlusion is what the operator saw and kept; the margin is .005 of the disc.
+- **Not decided here.** Whether to win the sun back later, by keeping rings and the shard trail off the disc (option 2): open to the operator.
+
 ## Open after this pass
 
 Each has an owner and a named check. None is decided here, and none can be without running code or a person.
@@ -1793,7 +1800,7 @@ Each has an owner and a named check. None is decided here, and none can be witho
 | R1 against accessibility | The operator | §14 risk 8, unchanged |
 | The stills' step at DI-113 (W3 9.40e-5 and W2 2.70e-5 per sample; 14 pixels at 1 level), not undone by DI-115's exact identity | Render the samples under DI-110's and DI-115's `props.vert.glsl` in one session, then with gates hidden | T00 owner; DI-115, DI-116 |
 | An opening gate's lower parts below the floor, under its alpha | A 60 fps pass at a gate's opening, viewing the floor below it | T00 owner, T05; DI-116 |
-| The swoop's strength; low rings touching the road at radius 8, or every ring floating at 6 or 7 with A16b over its [A] limit; the ship's outlined underside from below | Closed 2026-11-08 by the operator: swoop kept (O1's sun red accepted), rings touching the road accepted at radius 8, the ship reads as a solid object (T11's progress log) | DI-118; T11's feedback round |
+| The swoop's strength; low rings touching the road at radius 8, or every ring floating at 6 or 7 with A16b over its [A] limit; the ship's outlined underside from below | Closed 2026-11-08 by the operator: swoop kept (O1's sun red accepted; the gate holds it at its accepted values since DI-124), rings touching the road accepted at radius 8, the ship reads as a solid object (T11's progress log) | DI-118; T11's feedback round |
 | The shader comment's "bit for bit" (DI-115) | Closed: corrected at DI-118's edit of `props.vert.glsl` | T00 owner; DI-116, DI-118 |
 | FULLSCREEN and HIDE HUD on real devices and browsers: fill, the real Esc and system exits, the iPad's prefixed path, the iPhone's missing row, HIDE HUD on touch, the look of the new row (2026-11-08: HC8, HC9 on Android, HC11, HC12, HC13 passed or ruled; open: iPad Safari, HC10; DI-119) | `dist/` rebuilt and served by the operator's preview, then HC8 to HC13 | The operator; T08, T11's pack; DI-117 |
 

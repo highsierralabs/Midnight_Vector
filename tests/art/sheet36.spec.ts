@@ -17,7 +17,7 @@ import { decodePng, encodePng } from './support/png';
 import { flood, lift, dim, desat, toward, glow } from './support/plant';
 import { gateRow, roundDir, roundFile, roundName, baseRound, ART_ROOT, writeSpecResults, checkImage, type GateRow } from './support/round';
 import { downscale, crop, stretch, writePng, writeSheet, type Tile } from './support/sheet';
-import { LIMITS, B1_BOX, B1_MIN_LEVELS, CAM, CENTRE_R, HORIZON_LAST_ROW, FLOOR_FIRST_ROW } from './support/thresholds';
+import { LIMITS, O1_ACCEPTED, O1_ACCEPTED_RISE, B1_BOX, B1_MIN_LEVELS, CAM, CENTRE_R, HORIZON_LAST_ROW, FLOOR_FIRST_ROW } from './support/thresholds';
 
 const SEED = Number(process.env['TERRAIN_SEED'] ?? ART_SEED);
 const TILE_ONLY = process.env['TERRAIN_TILE_ONLY'] === '1' || SEED !== ART_SEED;
@@ -265,12 +265,27 @@ test('sheet36: 180 samples, stills gates, contact sheets', async ({ page, browse
   rows.push(gateRow('B1', LIMITS.B1, pairsM.map((m) => ({ v: m.B1!, at: at(m) })), `channels spanning >= ${B1_MIN_LEVELS} levels; Infinity when none does`));
   // O1 per pair is the least occluded of its five samples: what persists through a zone (terrain and scenery under
   // the keep-out), not an item or fence that happens to cross the disc in one sample (Decision log, M2).
-  const pairMin = (keep: (b: number) => boolean): { v: number; at: string }[] => combos.pairs.filter((p) => keep(p.biome) && pairsM.some((m) => m.palette === p.palette && m.biome === p.biome)).map((p) => {
+  const pairMin = (keep: (b: number) => boolean): { v: number; at: string; key: string }[] => combos.pairs.filter((p) => keep(p.biome) && pairsM.some((m) => m.palette === p.palette && m.biome === p.biome)).map((p) => {
     const ms = pairsM.filter((m) => m.palette === p.palette && m.biome === p.biome);
     const best = ms.reduce((a, b) => (b.O1! < a.O1! ? b : a));
-    return { v: best.O1!, at: `${label(p)} least of 5 at ${best.id}` };
+    return { v: best.O1!, at: `${label(p)} least of 5 at ${best.id}`, key: tileKey(p.palette, p.biome) };
   });
-  rows.push(gateRow('O1', LIMITS.O1, pairMin((b) => b !== CANYON), 'non-canyon, per pair, least occluded of 5 samples, the ship excluded'));
+  // DI-124 (amendment OA): the ten pairs whose red the operator accepted with the swoop (DI-118) are held at their accepted
+  // value instead of .15, at ART_SEED with five samples per pair only, where those values were read. O1all prints the old rule.
+  const o1 = pairMin((b) => b !== CANYON);
+  const accept = SEED === ART_SEED && !TILE_ONLY;
+  const accepted = (x: { key: string }): number | undefined => (accept ? O1_ACCEPTED[x.key] : undefined);
+  const free = o1.filter((x) => accepted(x) === undefined);
+  // A drill run on one accepted pair leaves O1 with nothing to read; a full run always has the other twenty.
+  if (free.length > 0 || !PARTIAL) rows.push(gateRow('O1', LIMITS.O1, free, accept
+    ? `non-canyon, per pair, least occluded of 5 samples, the ship excluded; the ${Object.keys(O1_ACCEPTED).length} pairs accepted at DI-118 are gated by O1accepted (DI-124)`
+    : 'non-canyon, per pair, least occluded of 5 samples, the ship excluded'));
+  if (accept) {
+    const held = o1.filter((x) => accepted(x) !== undefined);
+    if (!PARTIAL) expect.soft(held.map((x) => x.key).sort(), 'DI-124: every accepted pair is measured').toEqual(Object.keys(O1_ACCEPTED).sort());
+    if (held.length > 0) rows.push(gateRow('O1accepted', { value: O1_ACCEPTED_RISE, dir: 'max' }, held.map((x) => ({ v: x.v - accepted(x)!, at: `${x.at}: ${x.v.toFixed(4)} against ${accepted(x)!.toFixed(4)} accepted` })), 'rise over the O1 value the operator accepted with the swoop, per pair (DI-118, DI-124)'));
+    rows.push(gateRow('O1all', { value: LIMITS.O1.value, dir: 'max', reportOnly: true }, o1, 'O1 at .15 on every non-canyon pair, the rule before DI-124: the accepted red, printed'));
+  }
   rows.push(gateRow('O1withShip', { value: LIMITS.O1.value, dir: 'max', reportOnly: true }, combos.pairs.filter((p) => p.biome !== CANYON && pairsM.some((m) => m.palette === p.palette && m.biome === p.biome)).map((p) => {
     const ms = pairsM.filter((m) => m.palette === p.palette && m.biome === p.biome);
     const best = ms.reduce((a, b) => (b.O1withShip! < a.O1withShip! ? b : a));

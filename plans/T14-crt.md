@@ -6,7 +6,7 @@ owner: T14 executor, for the operator
 depends_on: [T10, T11, T13]
 owns: [plans/T14-crt.md]
 reads: [architecture.md, Agents.md, plans/**, src/**, tests/**, dev/**, scripts/**, package.json, playwright.config.ts, ../Synthwave_City/src/post/grade.ts, ../Synthwave_City/src/post/index.ts, ../Synthwave_City/src/app/app.ts]
-updated: 2026-11-18T03:00Z
+updated: 2026-11-18T02:35Z
 ---
 
 ## 1. Purpose
@@ -146,7 +146,7 @@ Every step is safe to re-run. The tree is clean at `e07a28a`, so `git restore` a
 - The crtSource test bans the substring `time` in the shader, comments included, stricter than the library needs [O: `tests/unit/fx/crtSource.test.ts`].
 - **Measured grille depth is about half the City's linear figure.** The block is mixed in linear light and the last pass encodes to sRGB, so the three-phase spread on final 8-bit pixels is .088 where the block gives .17 [O: M8]. Gates on the CRT frame are written in encoded units.
 - **Same-state frames differ at MSAA 2 or 4.** The first byte probe left the app at its tier's MSAA and 2 of 3 app frames differed between the old and new trees; at MSAA 0 all 33 matched in three runs [O]. That is DI-67's noise, not a T14 change.
-- **`sheet36` is red at `e07a28a`, before T14.** O1 .2221 at Toxic Arcade / Olympus, 10 of 30 pairs over .15, identical on both trees [O]. T11's last recorded run read .1421 [O: `plans/T11-art-pass.md`, round a24]; T13 changed the props layer and ran only `metrics` and `motion` of `tests/art` [O: `plans/T13-views.md` section 6]. So the change most likely came with T13 [I, not bisected]. Left for the operator: it is in T05's and T11's ground, not T14's.
+- **`sheet36` is red at `e07a28a`, before T14.** O1 .2221 at Toxic Arcade / Olympus, 10 of 30 pairs over .15, identical on both trees [O]. **Corrected 2026-11-18:** this entry first said the change most likely came with T13 [I, not bisected]. That was wrong. The stored round `a26` (2026-11-08, before T12 and T13) reads the same O1 .2221 on the same pair, and all 180 per-sample O1 values in its `metrics-sheet36.json` equal this tree's [O: node comparison of `test-results/T11-art/a26` and `dev`]. The red arrived at T11's round `op1b` with DI-118's swoop (`FOLLOW_Y` .15), where the floating rings and shard trail rise above the camera and cross the disc's lower part, and the operator accepted it on 2026-11-08: "Keep the swoop", O1's sun red accepted as its cost [O: `plans/T11-art-pass.md` Progress, 2026-11-07T23:00Z and 2026-11-08T16:40Z; `RECONCILIATION.md` DI-118's open-items row]. So it is a known, accepted red, not a regression; the gate was never changed to say so. The operator then chose to gate it at that level: DI-124, T11's amendment OA, where `sheet36` is green again.
 
 ## 11. Decision log
 
@@ -181,7 +181,7 @@ export interface UiCommands {
 
 **Result against Purpose.** The game draws Synthwave City's CRT block (scanlines that a bright beam fills, an RGB aperture grille, light given back, tube corners, strength .7) whenever the cruise card's new **CRT** box is ticked, which it is for a new player and for any store from before T14. Clearing it draws the frame drawn before T14, byte for byte at MSAA 0 on the 33 frames probed. The choice is stored, a toggle links no program and adds no draw, the card grows by no row on the landscape phones, and the sim, world, audio and HUD are untouched.
 
-**Gaps and what was not verified.** HC-C1 and HC-C2 passed (below). Frame time with the CRT on was not measured on the smoke budget (acceptance 6's last clause): the change is a few ALU in a pass that already runs and no draw, but that is an argument, not a measurement [I]. Only the RTX 4070 SUPER ran the GPU rows; no phone GPU has run the shader. The byte probe covered 33 frames, not every state. `sheet36` is red, before and after T14 alike (section 10).
+**Gaps and what was not verified.** HC-C1 and HC-C2 passed (below). Frame time with the CRT on was not measured on the smoke budget (acceptance 6's last clause): the change is a few ALU in a pass that already runs and no draw, but that is an argument, not a measurement [I]. Only the RTX 4070 SUPER ran the GPU rows; no phone GPU has run the shader. The byte probe covered 33 frames, not every state. `sheet36` is red, before and after T14 alike: the operator-accepted O1 red of DI-118 (section 10).
 
 **Lessons.** A test that reads 8-bit output measures the encoded image, so a linear-light figure from another project's source needs converting before it becomes a threshold. A byte comparison across trees needs MSAA 0, as DI-67 says.
 
@@ -191,3 +191,4 @@ export interface UiCommands {
 
 - 2026-11-18 Approved by the operator; status `in-progress`, then `done` the same day. M3's two-column case resolved as the plan allowed: the card grows by a line only at 480 px wide or less, and does not scroll there, so HC-C3 did not arise. Not committed.
 - 2026-11-18 HC-C1 and HC-C2 passed on the operator's report; committed and pushed at the operator's request.
+- 2026-11-18T02:35Z Section 10's `sheet36` entry corrected (the red is DI-118's, accepted on 2026-11-08, not T13's) and pointed at DI-124. The `updated` stamp of the previous note (03:00Z) ran ahead of the clock; this one is real.

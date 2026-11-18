@@ -6,7 +6,7 @@ owner: T00 executor
 depends_on: []
 owns: [package.json, package-lock.json, tsconfig*.json, vite.config.ts, vitest.config.ts, playwright.config.ts, eslint.config.js, .gitignore, scripts/**, src/contracts/**, src/core/**, src/testing/**, tests/support/**, tests/boundaries/**, tests/unit/core/**, plans/README.md, plans/T00-foundation.md]
 reads: [architecture.md, Agents.md, plans/**]
-updated: 2026-11-18T01:20Z
+updated: 2026-11-18T02:29Z
 ---
 
 ## 1. Purpose
@@ -669,6 +669,7 @@ Remaining in T00's own paths: nothing. `check:task` on a task with no files yet 
 - [x] 2026-11-13T03:45Z **Amendment VW, round 2 (for T13's M8 to M10, DI-122), reopened by the operator's review of T13's first build; status `in-progress`.** `architecture.md`: section 6.1's cockpit sentence names the pillars, the roof that hangs from the top edge, and the hands seen from the back; section 7.5 gains the paragraph "Phones play in landscape"; section 13 gains the decision row. `src/core/cockpit.ts`: one comment, which said nothing but the struts is drawn above the dashboard. DI-122 in the ledger. No contract line changed.
 - [x] 2026-11-13T04:01Z **Amendment VW, round 2, **closed, status `done`.** Final code, one chain, nothing under `src/` edited while it ran: `npm run check` exit 0 (124 files, 2053 passed, 2 skipped; glsl 195 files, 0 hits); `plans:check` and `contracts:check` exit 0; `tests/views` on `gpu` 17 passed and on `gpu-timing` 1 passed; `ui.spec.ts` 348 passed; `props.spec.ts` 42 passed, 3 skipped; `tests/e2e` 64 passed, 9 skipped; art `metrics` and `motion` 21 passed; `npm run build` exit 0 and `bundle.spec.ts` 246.1 KB of 260 (245.1 before). Not run: `tests/forever`, `tests/perf` other than the bundle, `test:software`, and `check:task` for each plan, which the whole-repo check stands in for.
 - [x] 2026-11-18 **Amendment CR (the CRT screen, for T14, DI-123), reopened by the operator's approval of `plans/T14-crt.md` and closed in the same pass, status `done`.** Additive contract lines: `FrameView.crt`, `UiCommands.setCrt`, and the `?crt` sentence of the `HarnessApi` comment, mirrored in `architecture.md` §8.1 (`contracts:check` PASS, 7 files). `scriptedFrame` takes `crt`, default false; `tests/unit/core/uniforms.test.ts`'s literal gains `crt: false`. `plans/README.md` gains T14's row and graph line; `architecture.md` §6.6, §12 and §13 edited for the operator, recorded as DI-123. `tests/boundaries/gates.test.ts` pins 15 task rows and 15 plans (CR-2). Evidence in `plans/T14-crt.md` section 9.
+- [x] 2026-11-18T02:29Z **Amendment OA (O1's accepted red made a gate, for T11, DI-124), by the operator's choice of option 1, opened and closed in the same pass, status `done`.** `architecture.md` §14's art-gate sentence gains the ten accepted pairs, held at their value plus .005, with the 15% rule printed for all thirty. `plans/RECONCILIATION.md` gains DI-124, and DI-118's open-items row says the gate now holds the red. The test change is T11's (its amendment OA). `plans:check` 0 problems.
 
 ## 10. Surprises and discoveries
 
@@ -799,6 +800,7 @@ From the VI-gates `test.fail()` repair, on 2026-11-06:
 | **VW-3: `gates.test.ts` pins 14 tasks** | The same four lines as PR-3, a consequence of the section 12 row the operator approved | 2026-11-13 | T13 executor, for the operator |
 | **CR-1: `FrameView.crt` and `UiCommands.setCrt` are additive; `?crt` is documented in the `HarnessApi` comment, beside `?tier`** | T14's section 12, approved with its plan. A force from the URL belongs to app/, as `?tier` does | 2026-11-18 | T14 executor, for the operator |
 | **CR-2: `gates.test.ts` pins 15 tasks** | The same lines as VW-3, a consequence of the section 12 row the operator approved | 2026-11-18 | T14 executor, for the operator |
+| **OA-1: §14's O1 sentence names the ten accepted pairs and their .005 margin** | The operator chose to make O1's accepted red (DI-118) a gate instead of a standing failure: "Proceed with option one." The design text must say what the gate now gives up | 2026-11-18 | T00 owner, for the operator |
 
 ## 12. Contract change requests
 
@@ -967,3 +969,4 @@ float droneOffset(float amp, float k, float seed, float phase) { return amp * si
 - 2026-11-13T03:45Z **Amendment VW, round 2** (design text and the ledger for T13's round 2, DI-122): reopened, status `in-progress`. `owns` and `reads` unchanged.
 - 2026-11-13T04:01Z **Amendment VW, round 2** closed, status `done`. Not committed.
 - 2026-11-18 **Amendment CR** (the CRT screen, for T14, DI-123): reopened and closed, status `done`. `owns` and `reads` unchanged. Not committed.
+- 2026-11-18T02:29Z **Amendment OA** (O1's accepted red, for T11, DI-124): opened and closed, status `done`. `owns` and `reads` unchanged.
