@@ -22,11 +22,13 @@ export interface Settings {
   hideHud: boolean;
   /** T13: the camera. Absent or unknown in a stored object loads CHASE, so a store from before T13 loads as it was. */
   cam: CamMode;
+  /** T14: the CRT screen. Absent or not a boolean in a stored object loads true, so a store from before T14 loads with it on, as a new player gets it. */
+  crt: boolean;
 }
 export interface Bests { score: number; km: number }
 
 export function defaultSettings(): Settings {
-  return { music: 0.8, sfx: 0.8, muted: false, quality: 'auto', reduced: null, hideHud: false, cam: CamMode.CHASE };
+  return { music: 0.8, sfx: 0.8, muted: false, quality: 'auto', reduced: null, hideHud: false, cam: CamMode.CHASE, crt: true };
 }
 
 function read(store: StoreLike, key: string): unknown {
@@ -77,6 +79,7 @@ export function loadSettings(store: StoreLike): Settings {
   const muted = field(o, 'muted');
   const reduced = field(o, 'reduced');
   const hideHud = field(o, 'hideHud');
+  const crt = field(o, 'crt');
   return {
     music: volume(field(o, 'music'), d.music),
     sfx: volume(field(o, 'sfx'), d.sfx),
@@ -85,11 +88,12 @@ export function loadSettings(store: StoreLike): Settings {
     reduced: typeof reduced === 'boolean' ? reduced : null,
     hideHud: typeof hideHud === 'boolean' ? hideHud : d.hideHud,
     cam: cam(field(o, 'cam')),
+    crt: typeof crt === 'boolean' ? crt : d.crt,
   };
 }
 
 export function saveSettings(store: StoreLike, s: Readonly<Settings>): void {
-  write(store, SETTINGS_KEY, { music: s.music, sfx: s.sfx, muted: s.muted, quality: s.quality, reduced: s.reduced, hideHud: s.hideHud, cam: CAM_NAMES[s.cam] });
+  write(store, SETTINGS_KEY, { music: s.music, sfx: s.sfx, muted: s.muted, quality: s.quality, reduced: s.reduced, hideHud: s.hideHud, cam: CAM_NAMES[s.cam], crt: s.crt });
 }
 
 function best(v: unknown): number {

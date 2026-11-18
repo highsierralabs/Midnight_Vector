@@ -574,7 +574,7 @@ Renderer: `{ powerPreference: 'high-performance', antialias: false, stencil: fal
 | 1 | ChromaticAberration | offset (.0006-.0014, .0003-.0007), radial, modulationOffset .35 | CONVOLUTION effects sort first regardless of argument order (`b.attributes - a.attributes`, line 15584) [O] |
 | 2 | Bloom | mipmapBlur, threshold .95, smoothing .25, intensity .8, radius .68, levels by tier | SCREEN here is `dst + src - min(dst * src, 1)`, HDR-safe [O]. Not ADD |
 | 3 | ToneMapping | `ToneMappingMode.NEUTRAL`, set explicitly | Source default is AGX [O: line 13446]. Mean chroma on the prototype: Neutral 70.9, ACES 58.7, AgX 49.7 [O] |
-| 4 | Crt (custom) | Integer 3 px scan period, scan .10, grain up to .07, phase-locked, `BlendFunction.SRC`, writes alpha = 1 | Final alpha must be 1: context alpha is hard-coded true, and a material's alpha reaches the canvas [O] |
+| 4 | Crt (custom) | Integer 3 px scan period, scan .10, grain up to .07, phase-locked, `BlendFunction.SRC`, writes alpha = 1. T14: with the player's CRT screen on, Synthwave City's scanlines, aperture grille and tube corners at strength .7 replace the scan, in every variant | Final alpha must be 1: context alpha is hard-coded true, and a material's alpha reaches the canvas [O] |
 | 5 | Vignette | offset .3, darkness .55 | The library's default technique has reversed edges, `smoothstep(0.8, offset * 0.799, ...)` [O], undefined by the spec [M]. It rendered on the RTX and SwiftShader [O]. If a device misrenders it, T06 moves the vignette into Crt |
 
 **Variants, prebuilt and swapped:** `composer.autoRenderToScreen = false; every variant.renderToScreen = true; toggle .enabled`.
@@ -585,6 +585,8 @@ Renderer: `{ powerPreference: 'high-performance', antialias: false, stencil: fal
 | `noCa` | Bloom, Tone, Crt, Vignette | 2 |
 | `min` | Bloom, Tone, Crt with scan and grain 0, Vignette | 1 |
 | `bare` | Tone, Crt with scan and grain 0 | 0 |
+
+**The CRT screen (T14).** The cruise card has a CRT box, on by default and stored with the other settings (`FrameView.crt`, `UiCommands.setCrt`). While it is on, the Crt effect draws Synthwave City's CRT block (`../Synthwave_City/src/post/grade.ts`) in place of the scan: a cosine scanline that a bright beam fills (`1 - .7 * .6 * (1 - .45 lum) * (1 - line)`), an RGB aperture grille mixed in at `.7 * .3`, most of the light they take given back, and corners that fall off by up to `.7 * .35`. Its pitch is `max(3, round(3 * pixelRatio))` drawing-buffer pixels, an integer as the scan's period is, where the City does not round. It runs in all four variants, through two uniforms in the same program, so a toggle links nothing and adds no draw. Grain, flash, glitch and the final alpha write are unchanged, and with the box off every frame is the frame drawn before T14. `?crt=0|1` forces it; under `?harness` it is forced off unless `?crt=1`, so §6.7's and §11.5's gates measure the frame they were drawn for. The grille raises per-pixel chroma and the lines lower the floor's black by design, so the CRT frame is measured and reported, not gated.
 
 Variants **share the same `BloomEffect`, `ToneMappingEffect` and `VignetteEffect` instances**: two passes sharing them rendered correctly, with alpha 255 and no errors [O]. Programs rose from 7 to 8 on the first use of the second variant [O], so each variant is rendered once at boot behind the title (first use cost 14.3 ms [O]), and scene materials go through `renderer.compileAsync` at the same point. Effect-level disabling is rejected: setting an effect to `DST` recompiles and still runs all bloom draws, and disabling the last pass under auto mode leaves the canvas empty [O].
 
@@ -1094,6 +1096,8 @@ export interface FrameView {
   readonly events: EventBuffer;
   quality: Readonly<QualityProfile>;
   reducedMotion: boolean;
+  /** T14. The CRT screen (scanlines, aperture grille, tube corners) is on. Read by the post stack only. */
+  crt: boolean;
 }
 
 // ---- rendering ----
@@ -1205,6 +1209,8 @@ export interface UiCommands {
   setReducedMotion(on: boolean): void;
   /** T13. The player's camera from now on. Takes effect outside DEMO. */
   setCamMode(m: CamMode): void;
+  /** T14. The CRT screen from now on. Ui.mount calls it at once with the stored choice. */
+  setCrt(on: boolean): void;
 }
 export type FatalReason = 'no-webgl2' | 'context-lost-permanent' | 'shader-error' | 'runtime-error';
 /** mount(root): root is an empty element above the canvas, never transformed, and input attaches to the canvas itself. DOM hooks for tests, as data-mv values: title, launch, hud, km, sector, cruise, resume, signal-lost, context-lost, autopilot, reduced, quality, fatal, reload. <html data-mv-mode> is demo, play, cruise or lost. The UI writes no bests once warpSerial is non-zero. */
@@ -1226,6 +1232,7 @@ export interface HarnessStats {
 }
 /**
  * Real page query, read only by app/. ?harness enables window.__mv. Under it ?period=<n> sets WorldOptions.periodChunks, default 1024, 0 = aperiodic. In any mode, ?seed=<int> overrides DEFAULT_SEED, and ?tier=0..4 sets CreateGovernor.forced with no boot timing. A bad value warns and falls back.
+ * T14. In any mode, ?crt=0|1 forces the CRT screen over the player's choice; under ?harness with no ?crt it is forced off, so a gate measures the frame it was drawn for.
  * The periodic world holds only zones 0 to 10 and jumps at multiples of 1024, so judge no picture across a wrap, and use ?period=0 to reach all 36 palette and biome pairs.
  * Wash-out metrics on final 8-bit RGBA, one meaning for T06, T09 and T11 (§6.7). Near-white: share of pixels with min(r, g, b) > 235. Mean chroma: mean of max - min. Haze lift: mean Rec.709 luma of the frame minus the same frame under forceFeel({ bloomGain: 0 }), whole frame.
  * blackP10: nearest-rank 10th percentile of rounded Rec.709 luma, whole frame. Limits and negative controls are in §6.7.
@@ -1802,6 +1809,7 @@ Sync and timer query both track the load, about 0.4 ms apart. **rAF delta with v
 | **T11** | Art pass: tune across modules, all gates green, operator review | Temporarily `src/render/**`, `src/world/palettes.ts`, `src/world/biomes.ts`, `src/contracts/glsl/hero.glsl`, `src/feel/tuning.ts`, `src/sim/tuning.ts`; permanently `tests/art/**`, `plans/T11-art-pass.md` | T10 | `plans/T11-art-pass.md` |
 | **T12** | Public release: README, licence, third-party notices, contributing guide, screenshots, GitHub Pages workflow | `README.md`, `LICENSE`, `THIRD-PARTY-NOTICES.md`, `CONTRIBUTING.md`, `docs/screenshots/**`, `.github/**`, `plans/T12-release.md` | T10 | `plans/T12-release.md` |
 | **T13** | Camera views: a cockpit view with a dashboard, wheel and arms, and a nose camera. It owns its acceptance specs; the code is in T00's, T05's, T08's and T10's paths and goes through their plans | `tests/views/**`, `plans/T13-views.md` | T10, T11 | `plans/T13-views.md` |
+| **T14** | CRT screen: Synthwave City's scanlines, aperture grille and tube corners, on by default, with a box in the cruise card. The code is in T00's, T06's, T08's and T10's paths and goes through their plans | `plans/T14-crt.md` | T10, T11, T13 | `plans/T14-crt.md` |
 
 Parallelism:
 
@@ -1812,6 +1820,7 @@ T00 (serial, first)
            |-> T11 (serial; nothing else writes while it runs)
            |-> T12 (release files and deploy only; no path in T11's window)
            |-> T13 (camera views, after T11; code through the owners' plans)
+           |-> T14 (CRT screen, after T13; code through the owners' plans)
 ```
 
 - T03 to T06 get screenshots before integration through `dev/*.html` and `startDevShell`, using `createFakeWorld()`.
@@ -1828,6 +1837,7 @@ Definition of done for every task: its plan's acceptance list passes, `npm run c
 |---|---|---|
 | **Ribbon addressed by integer chunks, no rebase** | Infinity | 2D chunk grid and pool: adds queues and bursts a forward-only world doesn't need. Discrete floating-origin rebase: a cross-system event that can pop |
 | **First person moves the view origin, not the camera (T13)** | The operator's request for a cockpit view and a nose camera, 2026-11-12 | Moving the camera to the ship: the props and ship programs subtract `vec3(cameraPosition.xy, 0.)` and the GLSL gate bans `cameraPosition.z`, so every near fade and fog distance would be 14 u off. A cockpit in a layer of its own: render siblings may not import each other, and the mesh builder and line shader it needs are the props layer's. Readouts drawn in the scene: there is no text in the scene to build on |
+| **The CRT screen replaces the scan while on, and off is the old frame (T14)** | The operator's request, 2026-11-17: Synthwave City's CRT effect, on by default, with a box in the cruise card to turn it off | Adding the City's lines on top of the scan: two patterns at nearly the same pitch beat. Gating the CRT frame by §6.7's limits: the grille is meant to raise chroma. Turning it off on the low tiers: it costs a few ALU in a pass that runs anyway, and a player's choice should hold at every tier |
 | **Phones play in landscape only (T13, T08's amendment LS)** | The operator, 2026-11-12, after seeing the cockpit view upright on a phone: upright is less appealing and harder to control, and the operator never plays that way | An orientation lock in place of a prompt: as far as the executor recalls, and not checked here, Chrome grants one only in fullscreen and iOS Safari not at all, so it cannot be the rule. Dropping the upright layout: tablets and narrow desktop windows still use it |
 | **One-axis clipmap on a height ring, 6 levels** | Infinity's mechanism, extended to 6 levels to keep the art prototype's 6 km reach. Tested at final design stage: +19k tris, identity and cracks still 0 [O] | Art's 24 chunk meshes of 1.12M tris: more vertices, which SwiftShader shows is what costs, plus chunk upload bursts. Skirts: grid lines would need excluding, and overlap plus morph measured 0 cracks |
 | **T = 4096 period rule** | Art | Infinity's 64 u limit: too short for pulses and ripple. Combined with Infinity's exact `chunk` arithmetic |

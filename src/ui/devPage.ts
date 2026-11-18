@@ -170,6 +170,7 @@ export function installDevPage(deps: DevDeps): void {
         reduced = on;
       },
       setCamMode(m) { record('setCamMode', [m]); },
+      setCrt(on) { record('setCrt', [on]); },
     });
     input.attach(stage);
   }

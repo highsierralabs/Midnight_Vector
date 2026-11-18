@@ -4,7 +4,7 @@
 import { readFileSync, writeFileSync } from 'node:fs';
 import { BlendFunction, ToneMappingMode } from 'postprocessing';
 import type { Page, TestInfo } from 'playwright/test';
-import { TIERS, pixelRatioFor, scanPeriodFor } from '../../src/render/fx/quality';
+import { TIERS, crtPitchFor, pixelRatioFor, scanPeriodFor } from '../../src/render/fx/quality';
 import { spectrum } from '../../src/render/fx/dev/metrics';
 import { RenderOrder, type Tier } from '../../src/contracts/index';
 import type {} from '../../src/render/fx/dev/fxDev';
@@ -1452,6 +1452,95 @@ test.describe('M7 governor', () => {
     for (const t of [4, 3, 2, 1, 0] as const) {
       await page.evaluate((tier) => { window.__fx!.setTier(tier); }, t);
       await shotOf(page, info, `M7-tier-${t}`, { ...REF, palette: 0 });
+    }
+  });
+});
+
+// T14: the CRT screen on the card. ?crt=1 replaces FrameView.crt on this page (PostOptions.crt); the real box is
+// tests/e2e/crt.spec.ts. Off is byte-identical to the frame drawn before T14 (plan T14, section 9, by a probe against
+// e07a28a at MSAA 0); here off must equal a page that never names the CRT, and on must not.
+test.describe('M8 CRT screen', () => {
+  test.beforeEach(({}, i) => { test.skip(i.project.name !== 'gpu', NEEDS_GPU); });
+
+  /**
+   * One frame, read in the page: a hash of every byte, and the grille's signature, per channel the spread of its mean
+   * over the three column phases relative to its mean (the grille at .21 puts about .09 to .17 there, the plain frame
+   * under .01). Frames stay in the page: three 8 MB reads through evaluate ran past the timeout.
+   */
+  async function frameSummary(page: Page, query: Query): Promise<{ hash: string; grille: number; links: number }> {
+    await open(page, { tier: 3, ...query });
+    return page.evaluate((ref) => {
+      const s = window.__shell!;
+      s.frameAt(0, { ...ref, palette: 0 });
+      const px = s.pixels();
+      const w = s.stats().width;
+      let x1 = 0x811c9dc5 >>> 0;
+      let x2 = 0;
+      const sum = [0, 0, 0, 0, 0, 0, 0, 0, 0];
+      for (let i = 0; i < px.length; i++) {
+        x1 = Math.imul(x1 ^ px[i]!, 0x01000193) >>> 0;
+        x2 = (x2 + px[i]! * ((i % 251) + 1)) % 4294967291;
+        const c = i & 3;
+        if (c < 3) sum[((i >> 2) % w % 3) * 3 + c]! += px[i]!;
+      }
+      let grille = 0;
+      for (let c = 0; c < 3; c++) {
+        const m = [sum[c]!, sum[3 + c]!, sum[6 + c]!];
+        const mean = (m[0]! + m[1]! + m[2]!) / 3;
+        if (mean >= 1) grille = Math.max(grille, (Math.max(...m) - Math.min(...m)) / mean);
+      }
+      return { hash: `${x1.toString(16)}-${x2.toString(16)}`, grille, links: window.__fx!.links() };
+    }, REF);
+  }
+
+  test('M8 off is the plain frame, on draws the grille, and neither links a program more', async ({ page }) => {
+    const plain = await frameSummary(page, {});
+    const off = await frameSummary(page, { crt: 0 });
+    const on = await frameSummary(page, { crt: 1 });
+    console.log(`T14 M8 ${JSON.stringify({ plain, off, on })}`);
+    expect(off.hash, '?crt=0 draws the plain frame').toBe(plain.hash);
+    expect(on.hash, 'the negative control: ?crt=1 changes the frame').not.toBe(plain.hash);
+    expect(on.grille).toBeGreaterThan(0.06);
+    expect(plain.grille).toBeLessThan(0.02);
+    expect(off.links).toBe(plain.links);
+    expect(on.links).toBe(plain.links);
+  });
+
+  for (const [dpr, tier] of [[1, 3], [1.5, 4], [1.5, 3], [2, 4], [2, 3]] as const) {
+    test.describe(`DPR ${dpr}`, () => {
+      test.use({ deviceScaleFactor: dpr, viewport: { width: 1920, height: 1080 } });
+
+      test(`M8 pitch ${dpr} tier ${tier}`, async ({ page }, info) => {
+        await open(page, { card: 'flat', v: 0.2, tier, crt: 1 });
+        await page.evaluate((ref) => { window.__shell!.frameAt(0, { ...ref, palette: 0, reducedMotion: true }); }, REF);
+        const ratio = await page.evaluate(() => window.__fx!.debug.pixelRatio);
+        const r = pixelRatioFor(TIERS[tier]!, 1920, 1080, dpr);
+        expect(ratio).toBeCloseTo(r, 9);
+        const png = await page.screenshot({ clip: { x: 900, y: 240, width: 120, height: 600 } });
+        const rows = await page.evaluate(async (b64) => {
+          const fx = window.__fx!;
+          const im = await fx.decodePng(b64);
+          const cx = im.width >> 1;
+          const cy = im.height >> 1;
+          return Array.from(fx.metrics.rowMeans(im.data, im.width, { x0: cx - 32, x1: cx + 32, y0: cy - 256, y1: cy + 256 }, 1));
+        }, png.toString('base64'));
+        const sp = spectrum(rows);
+        const want = (crtPitchFor(r) * dpr) / r;
+        console.log(`T14 M8 dpr ${dpr} tier ${tier}: ratio ${r.toFixed(4)}, pitch ${crtPitchFor(r)}, period want ${want.toFixed(3)} got ${sp.period.toFixed(3)}, amp ${sp.amp.toFixed(3)}, low ${sp.low.toFixed(3)}`);
+        expect(Math.abs(sp.period - want) / want).toBeLessThanOrEqual(0.03);
+        expect(sp.low).toBeLessThanOrEqual(0.5);
+        const path = info.outputPath(`M8-dpr${dpr}-tier${tier}.png`);
+        await page.evaluate((ref) => { window.__shell!.frameAt(0, { ...ref, palette: 0 }); }, REF);
+        await page.screenshot({ path, clip: { x: 720, y: 380, width: 480, height: 270 } });
+        console.log(`SCREENSHOT ${path}`);
+      });
+    });
+  }
+
+  test('M8 images', async ({ page }, info) => {
+    for (const crt of [0, 1] as const) {
+      await open(page, { crt });
+      for (const palette of [0, 2]) await shotOf(page, info, `M8-crt${crt}-p${palette}`, { ...REF, palette });
     }
   });
 });

@@ -1,4 +1,5 @@
-// The custom last-but-one effect: flash, glitch, scan and grain in one pass, and the final alpha write (section 6.6).
+// The custom last-but-one effect: flash, glitch, scan or the CRT screen (T14), and grain in one pass, and the final alpha
+// write (section 6.6).
 import { BlendFunction, Effect } from 'postprocessing';
 import { Uniform, Vector3 } from 'three';
 import source from './crt.frag.glsl?raw';
@@ -23,6 +24,8 @@ export class CrtEffect extends Effect {
   private readonly flash: Uniform<number>;
   private readonly flashColor: Uniform<Vector3>;
   private readonly glitch: Uniform<number>;
+  private readonly crt: Uniform<number>;
+  private readonly crtPitch: Uniform<number>;
 
   constructor(alpha: 'one' | 'keep' = 'one') {
     const scan = new Uniform(0);
@@ -32,11 +35,14 @@ export class CrtEffect extends Effect {
     const flash = new Uniform(0);
     const flashColor = new Uniform(new Vector3());
     const glitch = new Uniform(0);
+    const crt = new Uniform(0);
+    const crtPitch = new Uniform(3);
     super('CrtEffect', fragmentFor(alpha), {
       blendFunction: BlendFunction.SRC,
       uniforms: new Map<string, Uniform>([
         ['uScan', scan], ['uScanPeriod', scanPeriod], ['uGrain', grain], ['uGrainFrame', grainFrame],
         ['uFlash', flash], ['uFlashColor', flashColor], ['uGlitch', glitch],
+        ['uCrt', crt], ['uCrtPitch', crtPitch],
       ]),
     });
     this.scan = scan;
@@ -46,6 +52,8 @@ export class CrtEffect extends Effect {
     this.flash = flash;
     this.flashColor = flashColor;
     this.glitch = glitch;
+    this.crt = crt;
+    this.crtPitch = crtPitch;
   }
 
   /** Writes the frame's values. scanPeriodOverride is the dev-only moire control. No allocation. */
@@ -57,5 +65,7 @@ export class CrtEffect extends Effect {
     this.flash.value = p.flash;
     this.flashColor.value.set(p.flashR, p.flashG, p.flashB);
     this.glitch.value = p.glitch;
+    this.crt.value = p.crt;
+    this.crtPitch.value = p.crtPitch;
   }
 }

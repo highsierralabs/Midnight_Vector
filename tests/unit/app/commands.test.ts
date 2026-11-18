@@ -24,9 +24,9 @@ function rig() {
   const forced: (Tier | 'auto')[] = [];
   const gov = { profile: null, sample: () => null, force: (t: Tier | 'auto') => { forced.push(t); } } as unknown as Governor;
   let governor: Governor | null = null;
-  const view = { reducedMotion: false };
+  const view = { reducedMotion: false, crt: false };
   const cam: { want: CamMode } = { want: CamMode.CHASE };
-  const cmd = createCommands({ sim, audio, view, cam, governor: () => governor });
+  const cmd = createCommands({ sim, audio, view, cam, crtForced: null, governor: () => governor });
   return { log, sim, cmd, view, cam, forced, gov, setGovernor: (g: Governor | null) => { governor = g; }, unlocked: () => unlockResolved };
 }
 
@@ -105,5 +105,25 @@ describe('createCommands', () => {
     r.cmd.setCamMode(CamMode.CHASE);
     expect(r.cam.want).toBe(CamMode.CHASE);
     expect(r.log).toEqual([]);
+  });
+
+  it('T14: setCrt writes the view, and nothing else', () => {
+    const r = rig();
+    r.cmd.setCrt(true);
+    expect(r.view.crt).toBe(true);
+    r.cmd.setCrt(false);
+    expect(r.view.crt).toBe(false);
+    expect(r.log).toEqual([]);
+  });
+
+  it('T14: under a ?crt force, setCrt cannot move the view off the forced value', () => {
+    for (const forced of [true, false]) {
+      const view = { reducedMotion: false, crt: !forced };
+      const cmd = createCommands({ sim: rig().sim, audio: {} as AudioEngine, view, cam: { want: CamMode.CHASE }, crtForced: forced, governor: () => null });
+      cmd.setCrt(!forced);
+      expect(view.crt).toBe(forced);
+      cmd.setCrt(forced);
+      expect(view.crt).toBe(forced);
+    }
   });
 });

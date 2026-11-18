@@ -6,7 +6,7 @@ owner: T10 executor
 depends_on: [T01, T02, T03, T04, T05, T06, T07, T08, T09]
 owns: [index.html, src/main.ts, src/app/**, tests/e2e/**, tests/unit/app/**, plans/T10-integrate.md]
 reads: [architecture.md, Agents.md, plans/**, src/**, dev/**, tests/**, package.json, vite.config.ts, playwright.config.ts]
-updated: 2026-11-13T04:01Z
+updated: 2026-11-18T01:20Z
 ---
 
 ## 1. Purpose
@@ -853,6 +853,7 @@ Paste short output into Progress as each passes. Thresholds marked `[A]` are unm
 - [x] 2026-11-13T02:15Z **Amendment VW closed, status `done`.** Final code, one chain, nothing under `src/` edited while it ran: `npm run check` exit 0 (123 files, 2043 passed, 2 skipped; glsl 194 files, 0 hits); `plans:check` 0 problems; `contracts:check` PASS; `tests/views` on `gpu` 13 of 13 after the seed-155 row stopped gating chase (below); `tests/visual/ui.spec.ts` 304 passed; `tests/visual/props.spec.ts` 42 passed, 3 skipped (the software rows); `tests/e2e` on `gpu` 64 passed, 9 skipped, as before T13; `tests/art` metrics and motion 21 passed, chase S1far .0604 against .07, the value before T13; `tests/perf/bundle.spec.ts` 245.1 KB of 260. T13's sparkle question is the operator's; an answer that softens first person's follow would reopen this plan.
 - [x] 2026-11-13T03:45Z **Amendment LS (landscape on phones, for T13's M10, DI-122), reopened by the operator's review of T13's first build; status `in-progress`.** Three e2e rows used a phone held upright, 390 x 844 with touch, which T08's rotate gate now covers: `audio.spec.ts`'s two touch rows, `modes.spec.ts`'s touch row and `touch.spec.ts`'s two. Each holds the phone sideways, 844 x 390, with its touch points moved inside that screen. No `src/app` change: the gate is T08's, and it parks a run through `togglePause`, which already exists.
 - [x] 2026-11-13T04:01Z **Amendment LS **closed, status `done`.** The five touch rows pass sideways: `tests/e2e` 64 passed, 9 skipped, as before the change. Final code, one chain, nothing under `src/` edited while it ran: `npm run check` exit 0 (124 files, 2053 passed, 2 skipped; glsl 195 files, 0 hits); `plans:check` and `contracts:check` exit 0; `tests/views` on `gpu` 17 passed and on `gpu-timing` 1 passed; `ui.spec.ts` 348 passed; `props.spec.ts` 42 passed, 3 skipped; `tests/e2e` 64 passed, 9 skipped; art `metrics` and `motion` 21 passed; `npm run build` exit 0 and `bundle.spec.ts` 246.1 KB of 260 (245.1 before). Not run: `tests/forever`, `tests/perf` other than the bundle, `test:software`, and `check:task` for each plan, which the whole-repo check stands in for.
+- [x] 2026-11-18 **Amendment CR (the CRT screen, for T14, DI-123), reopened by the operator's approval of `plans/T14-crt.md` and closed in the same pass, status `done`.** `params.ts` reads `?crt=0|1`; `?harness` alone gives false, so every harness spec and art gate measures the plain frame. `commands.ts` `setCrt` writes `view.crt` unless forced. `view.ts` carries `crt`; boot sets `view.crt = params.crt ?? true` before mount. Unit: params and commands rows. New `tests/e2e/crt.spec.ts` (normal visit, real clicks): on by default, off by the box, ten toggles link nothing (18 and 18), remembered over a reload, a pre-T14 store loads on, `?crt` holds over the box; 3 passed.
 
 ## 10. Surprises and discoveries
 
@@ -993,6 +994,7 @@ None of this has run against project code.
 | **VW-3: `writeCamStep` and `writeCamAt` keep their signatures; the camera move is a second call** | Their existing tests stay as they are, and the chase path is provably untouched | 2026-11-13 | T13 executor, for the operator |
 | **VW-4: first person's roll is a gain on `feel.roll` in the loop's scratch copy** | Feel already banks the camera by up to .05 rad and writes 0 under reduced motion, so no contract field and no change to `src/core/uniforms.ts` or `src/feel` | 2026-11-13 | T13 executor, for the operator |
 | **VW-5: first person caps the field of view at `2 atan(1.515 / aspect)`** | Section 6.4's fog bound is a design invariant, and it was drawn for the chase camera's reach. One constant restores it, visible only on a stage wider than about 2.25:1 and only as two degrees less widening on boost. Put to the operator with T13's M4 for ratification | 2026-11-13 | T13 executor, for the operator |
+| **CR-1: under `?harness` the CRT is forced off unless `?crt=1`** | T14's C-4. The gates and references were drawn for the plain frame; the CRT's own rows say `?crt=1` or use a normal visit | 2026-11-18 | T14 executor, for the operator |
 
 ## 12. Contract change requests
 
@@ -1117,3 +1119,4 @@ Known not verifiable by T10 regardless:
 - 2026-11-13T02:15Z **Amendment VW** closed, status `done`. Not committed.
 - 2026-11-13T03:45Z **Amendment LS** (landscape on phones, for T13, DI-122): reopened, status `in-progress`. `owns` and `reads` unchanged.
 - 2026-11-13T04:01Z **Amendment LS** closed, status `done`. Not committed.
+- 2026-11-18 **Amendment CR** (the CRT screen, for T14, DI-123): reopened and closed, status `done`. `owns` and `reads` unchanged. Not committed.

@@ -271,6 +271,7 @@ export const createUi: CreateUi = () => {
     if (settings.quality !== 'auto') cmd.setQuality(settings.quality);
     cmd.setReducedMotion(reduced);
     cmd.setCamMode(settings.cam);
+    cmd.setCrt(settings.crt);
 
     // On a touch screen nobody asked for focus, and the ring only doubled the button's edge (V1-T08). Focus is still
     // there for Enter and a screen reader, and the ring returns as soon as a keyboard moves it.

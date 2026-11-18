@@ -315,6 +315,8 @@ export interface FrameView {
   readonly events: EventBuffer;
   quality: Readonly<QualityProfile>;
   reducedMotion: boolean;
+  /** T14. The CRT screen (scanlines, aperture grille, tube corners) is on. Read by the post stack only. */
+  crt: boolean;
 }
 
 // ---- rendering ----
@@ -426,6 +428,8 @@ export interface UiCommands {
   setReducedMotion(on: boolean): void;
   /** T13. The player's camera from now on. Takes effect outside DEMO. */
   setCamMode(m: CamMode): void;
+  /** T14. The CRT screen from now on. Ui.mount calls it at once with the stored choice. */
+  setCrt(on: boolean): void;
 }
 export type FatalReason = 'no-webgl2' | 'context-lost-permanent' | 'shader-error' | 'runtime-error';
 /** mount(root): root is an empty element above the canvas, never transformed, and input attaches to the canvas itself. DOM hooks for tests, as data-mv values: title, launch, hud, km, sector, cruise, resume, signal-lost, context-lost, autopilot, reduced, quality, fatal, reload. <html data-mv-mode> is demo, play, cruise or lost. The UI writes no bests once warpSerial is non-zero. */
@@ -447,6 +451,7 @@ export interface HarnessStats {
 }
 /**
  * Real page query, read only by app/. ?harness enables window.__mv. Under it ?period=<n> sets WorldOptions.periodChunks, default 1024, 0 = aperiodic. In any mode, ?seed=<int> overrides DEFAULT_SEED, and ?tier=0..4 sets CreateGovernor.forced with no boot timing. A bad value warns and falls back.
+ * T14. In any mode, ?crt=0|1 forces the CRT screen over the player's choice; under ?harness with no ?crt it is forced off, so a gate measures the frame it was drawn for.
  * The periodic world holds only zones 0 to 10 and jumps at multiples of 1024, so judge no picture across a wrap, and use ?period=0 to reach all 36 palette and biome pairs.
  * Wash-out metrics on final 8-bit RGBA, one meaning for T06, T09 and T11 (§6.7). Near-white: share of pixels with min(r, g, b) > 235. Mean chroma: mean of max - min. Haze lift: mean Rec.709 luma of the frame minus the same frame under forceFeel({ bloomGain: 0 }), whole frame.
  * blackP10: nearest-rank 10th percentile of rounded Rec.709 luma, whole frame. Limits and negative controls are in §6.7.

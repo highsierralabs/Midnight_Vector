@@ -1,7 +1,7 @@
 // What dev/fx.html needs: the card, the speed lines and the post stack wired from the query string, plus window.__fx.
 // Lint keeps this module away from src/testing, so the page itself hands the result to the dev shell.
 // Query: bindtarget=0 rendervariants=0 keepalive=0 crtalpha=keep dither=0 gainmax=<n> flashwhite=1 scanperiod=<n>
-// lineperiod=<n> governor=1 bootp95=<ms>, plus the card's own, see testCard.ts.
+// lineperiod=<n> governor=1 bootp95=<ms> crt=0|1 (T14), plus the card's own, see testCard.ts.
 import type { Governor, PostStack, QualityProfile, RenderLayer, Tier } from '../../../contracts/index';
 import { createGovernorImpl } from '../governor';
 import { createPostStack, type PostDebug, type PostOptions } from '../post';
@@ -36,6 +36,8 @@ function optionsFrom(q: URLSearchParams): PostOptions {
   if (q.get('flashwhite') === '1') o.flashWhite = true;
   const scan = q.get('scanperiod');
   if (scan !== null) o.scanPeriod = Number(scan);
+  const crt = q.get('crt');
+  if (crt === '0' || crt === '1') o.crt = crt === '1';
   return o;
 }
 

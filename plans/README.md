@@ -28,6 +28,7 @@ Select-String -Path plans\T*.md -Pattern '^status:' | ForEach-Object { "$($_.Fil
 | T11 | Art pass: tune across modules, all gates green, operator review | [plans/T11-art-pass.md](T11-art-pass.md) | T10 |
 | T12 | Public release: README, licence, notices, contributing guide, screenshots, GitHub Pages workflow | [plans/T12-release.md](T12-release.md) | T10 |
 | T13 | Camera views: a cockpit view with a dashboard, wheel and arms, and a nose camera | [plans/T13-views.md](T13-views.md) | T10, T11 |
+| T14 | CRT screen: Synthwave City's scanlines, aperture grille and tube corners, on by default, with a box in the cruise card | [plans/T14-crt.md](T14-crt.md) | T10, T11, T13 |
 
 ## Order
 
@@ -38,6 +39,7 @@ T00 (serial, first)
            |-> T11 (serial; nothing else writes while it runs)
            |-> T12 (release files and deploy only; no path in T11's window)
            |-> T13 (camera views, after T11; code through the owners' plans)
+           |-> T14 (CRT screen, after T13; code through the owners' plans)
 ```
 
 ## Before spawning executors

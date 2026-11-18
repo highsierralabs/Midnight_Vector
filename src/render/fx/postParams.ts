@@ -1,7 +1,7 @@
 // All the per-frame arithmetic of the post stack, away from any GL: what a FrameView means for the effects. Pure, and
 // writes only into the caller's object, so a frame allocates nothing here.
 import type { FrameView, PostVariant } from '../../contracts/index';
-import { scanAmpFor, scanPeriodFor } from './quality';
+import { CRT_STRENGTH, crtPitchFor, scanAmpFor, scanPeriodFor } from './quality';
 
 export const BLOOM_INTENSITY = 0.8;
 /** T02's bloomGain tops out at 1.25. This is the last defence, and a harness override of 0 stays legal. */
@@ -27,6 +27,8 @@ export interface PostParams {
   caX: number; caY: number; bloomIntensity: number; exposure: number;
   scan: number; scanPeriod: number; grain: number; grainFrame: number;
   flash: number; flashR: number; flashG: number; flashB: number; glitch: number;
+  /** T14: CRT screen strength, 0 off, and its pitch in drawing-buffer pixels. While crt > 0 the shader skips scan. */
+  crt: number; crtPitch: number;
 }
 
 export function createPostParams(): PostParams {
@@ -34,6 +36,7 @@ export function createPostParams(): PostParams {
     caX: 0, caY: 0, bloomIntensity: BLOOM_INTENSITY, exposure: 1,
     scan: 0, scanPeriod: 3, grain: 0, grainFrame: 0,
     flash: 0, flashR: 0, flashG: 0, flashB: 0, glitch: 0,
+    crt: 0, crtPitch: 3,
   };
 }
 
@@ -64,6 +67,9 @@ export function computePostParams(v: Readonly<FrameView>, variant: PostVariant, 
   out.scan = textured ? scanAmpFor(out.scanPeriod) : 0;
   out.grain = textured && !v.reducedMotion ? GRAIN : 0;
   out.grainFrame = Math.floor((v.tick % GRAIN_PERIOD_TICKS) / GRAIN_TICKS);
+  // T14: the player's CRT screen, in every variant: a few ALU in a pass that runs anyway.
+  out.crt = v.crt ? CRT_STRENGTH : 0;
+  out.crtPitch = crtPitchFor(pixelRatio);
 
   out.flash = feel.flash;
   const pal = v.zone.palette;

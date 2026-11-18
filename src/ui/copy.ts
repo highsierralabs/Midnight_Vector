@@ -54,6 +54,8 @@ export const CAMERA_ARIA: readonly string[] = CAMERA_NAMES.map((n) => `Camera: $
 export const LABEL_REDUCED = 'REDUCED MOTION';
 export const LABEL_FULLSCREEN = 'FULLSCREEN';
 export const LABEL_HIDE_HUD = 'HIDE HUD';
+/** T14: the CRT screen's box. */
+export const LABEL_CRT = 'CRT';
 export const LABEL_RUN = 'THIS RUN';
 export const CRUISE_NOTE = 'There is no true pause. Rules are frozen and hazards ghosted, and the world keeps moving behind this menu.';
 

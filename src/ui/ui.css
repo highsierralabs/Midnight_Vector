@@ -935,16 +935,18 @@ html[data-mv-boot]:not([data-mv-boot="running"]) .mv-ui .mv-launch {
 .mv-ui .mv-toggles > [hidden] { display: none; }
 /* T13: MUTE and the camera button share one row, on the radios' own columns and gap, so the card grows by nothing: a
    row more made it scroll on short landscape phones (371 px in 338), as two toggle rows did [P2]. The button takes two
-   columns, and one where the grid has two, with the short label. */
+   columns, and one where the grid has two, with the short label.
+   T14: CRT takes the middle column, so the button has one column and always the short label. Where the grid has two the
+   button drops to a line of its own; that layout is only for windows 480 px wide or less, which are tall. */
 .mv-pair { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 0 .7em; align-items: center; }
 .mv-pair > .mv-check { white-space: nowrap; }
 .mv-cam {
-  grid-column: span 2;
+  grid-column: span 1;
   min-width: 0;
   min-height: 2.3em;
-  padding: 0 .6em;
+  padding: 0 .3em;
   font-size: .95em;
-  letter-spacing: .08em;
+  letter-spacing: 0;
   white-space: nowrap;
   color: #fff;
   background: rgba(45, 226, 230, .12);
@@ -952,12 +954,10 @@ html[data-mv-boot]:not([data-mv-boot="running"]) .mv-ui .mv-launch {
   text-shadow: var(--mv-halo);
 }
 .mv-ui .mv-cam:hover { background: rgba(45, 226, 230, .28); }
-.mv-cam-short { display: none; }
+.mv-cam-long { display: none; }
 @media (max-width: 480px) {
   .mv-radios, .mv-toggles, .mv-pair { grid-template-columns: repeat(2, minmax(0, 1fr)); }
-  .mv-cam { grid-column: span 1; letter-spacing: 0; padding: 0 .3em; }
-  .mv-cam-long { display: none; }
-  .mv-cam-short { display: inline; }
+  .mv-cam { grid-column: span 2; }
 }
 
 @media (pointer: coarse) {

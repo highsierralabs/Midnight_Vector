@@ -70,6 +70,8 @@ export interface UiDom {
   readonly fullscreen: HTMLInputElement;
   readonly fullscreenRow: HTMLElement;
   readonly hideHud: HTMLInputElement;
+  /** T14: the CRT screen's box, in MUTE's row. */
+  readonly crt: HTMLInputElement;
   readonly reduced: HTMLInputElement;
   readonly runScore: Text;
   readonly runKm: Text;
@@ -186,6 +188,7 @@ export function buildDom(doc: Document, root: HTMLElement): UiDom {
   const mute = checkRow(doc, copy.LABEL_MUTE, { 'data-mv': 'mute-toggle' });
   const fullscreen = checkRow(doc, copy.LABEL_FULLSCREEN, { 'data-mv': 'fullscreen' });
   const hideHud = checkRow(doc, copy.LABEL_HIDE_HUD, { 'data-mv': 'hide-hud' });
+  const crt = checkRow(doc, copy.LABEL_CRT, { 'data-mv': 'crt' });
   const reduced = checkRow(doc, copy.LABEL_REDUCED, { 'data-mv': 'reduced' });
   const autoLabel = doc.createTextNode(copy.LABEL_AUTO);
   const quality: HTMLInputElement[] = [];
@@ -225,7 +228,8 @@ export function buildDom(doc: Document, root: HTMLElement): UiDom {
       h(doc, 'div', { class: 'mv-card-controls' },
         music.row,
         sfx.row,
-        h(doc, 'div', { class: 'mv-pair' }, mute.row, cam),
+        // T14: CRT joins MUTE and the camera, one column each, so the card still grows by no row where it is tightest.
+        h(doc, 'div', { class: 'mv-pair' }, mute.row, crt.row, cam),
         // One choice of six, so one radio group to assistive technology, named by its legend; ui.css draws the radios round.
         h(doc, 'fieldset', { class: 'mv-quality', 'data-mv': 'quality', role: 'radiogroup' },
           h(doc, 'legend', { class: 'mv-label' }, copy.LABEL_QUALITY),
@@ -263,7 +267,7 @@ export function buildDom(doc: Document, root: HTMLElement): UiDom {
     root, title, launch, launchNoHud, best, hud, score, scoreEl, sync, syncEl, shields, overdrive, overdriveFill, km, sector, objective,
     menuButton, boostButton, popups, popupText, banner, bannerTitle, bannerObjective, bannerGrade, autoTag, live, rotate,
     cruise, resume, music: music.range, sfx: sfx.range, mute: mute.box, quality, cam, camName, autoLabel,
-    fullscreen: fullscreen.box, fullscreenRow: fullscreen.row, hideHud: hideHud.box, reduced: reduced.box,
+    fullscreen: fullscreen.box, fullscreenRow: fullscreen.row, hideHud: hideHud.box, crt: crt.box, reduced: reduced.box,
     runScore, runKm, bestScore, bestKm,
   };
 }

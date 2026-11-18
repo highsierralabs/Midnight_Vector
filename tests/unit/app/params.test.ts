@@ -12,12 +12,12 @@ function parse(search: string): { p: ReturnType<typeof parseParams>; warns: stri
 describe('parseParams', () => {
   it('defaults: seed DEFAULT_SEED, aperiodic, no harness, no tier, no warning', () => {
     const { p, warns } = parse('');
-    expect(p).toEqual({ seed: DEFAULT_SEED, harness: false, period: 0, tier: null });
+    expect(p).toEqual({ seed: DEFAULT_SEED, harness: false, period: 0, tier: null, crt: null });
     expect(warns).toEqual([]);
   });
 
   it('?harness gives period 1024; ?harness&period=0 is aperiodic; ?period=n is honoured under harness', () => {
-    expect(parse('?harness').p).toEqual({ seed: DEFAULT_SEED, harness: true, period: 1024, tier: null });
+    expect(parse('?harness').p).toEqual({ seed: DEFAULT_SEED, harness: true, period: 1024, tier: null, crt: false });
     expect(parse('?harness&period=0').p.period).toBe(0);
     expect(parse('?harness&period=2048').p.period).toBe(2048);
     expect(parse('?harness&period=8').p.period).toBe(8);
@@ -69,8 +69,28 @@ describe('parseParams', () => {
   }
 
   it('combines every switch', () => {
-    const { p, warns } = parse('?harness&period=0&seed=11&tier=2');
-    expect(p).toEqual({ seed: 11, harness: true, period: 0, tier: 2 });
+    const { p, warns } = parse('?harness&period=0&seed=11&tier=2&crt=1');
+    expect(p).toEqual({ seed: 11, harness: true, period: 0, tier: 2, crt: true });
     expect(warns).toEqual([]);
   });
+
+  it('T14: ?crt=0|1 forces the CRT in any mode; ?harness alone forces it off; absent otherwise follows the player', () => {
+    expect(parse('').p.crt).toBeNull();
+    expect(parse('?crt=1').p.crt).toBe(true);
+    expect(parse('?crt=0').p.crt).toBe(false);
+    expect(parse('?harness').p.crt).toBe(false);
+    expect(parse('?harness&crt=1').p.crt).toBe(true);
+    expect(parse('?harness&crt=0').p.crt).toBe(false);
+  });
+
+  for (const bad of ['2', 'on', '', 'true', '01']) {
+    it(`T14: ?crt=${JSON.stringify(bad)} warns once and is ignored`, () => {
+      const plain = parse(`?crt=${encodeURIComponent(bad)}`);
+      expect(plain.p.crt).toBeNull();
+      expect(plain.warns.length).toBe(1);
+      const harness = parse(`?harness&crt=${encodeURIComponent(bad)}`);
+      expect(harness.p.crt).toBe(false);
+      expect(harness.warns.length).toBe(1);
+    });
+  }
 });

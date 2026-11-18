@@ -4,7 +4,9 @@ import { SimMode, type AudioEngine, type CamMode, type Governor, type Sim, type 
 export interface CommandDeps {
   readonly sim: Sim;
   readonly audio: AudioEngine;
-  readonly view: { reducedMotion: boolean };
+  readonly view: { reducedMotion: boolean; crt: boolean };
+  /** T14: ?crt's force, which wins over setCrt; null follows the player. */
+  readonly crtForced: boolean | null;
   /** T13: the camera state; the loop moves the camera toward `want`. */
   readonly cam: { want: CamMode };
   /** The final governor, or null while boot is still running. */
@@ -45,6 +47,9 @@ export function createCommands(d: CommandDeps): AppCommands {
     },
     setCamMode(m) {
       d.cam.want = m;
+    },
+    setCrt(on) {
+      d.view.crt = d.crtForced ?? on;
     },
   };
 }

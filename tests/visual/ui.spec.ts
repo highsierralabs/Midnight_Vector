@@ -1785,8 +1785,8 @@ test.describe('a11y:', () => {
     // Tab through everything and wrap, never leaving the dialog.
     const seen: (string | null)[] = [];
     // E2 (amendment FH): FULLSCREEN and HIDE HUD come between the radios and REDUCED MOTION, which is still last.
-    // Amendment VW (T13): the camera button follows MUTE, on its row.
-    for (let i = 0; i < 9; i++) {
+    // Amendment VW (T13): the camera button follows MUTE, on its row. Amendment CR (T14): the CRT box sits between them.
+    for (let i = 0; i < 10; i++) {
       await page.keyboard.press('Tab');
       expect(await page.evaluate(() => document.querySelector('[data-mv="cruise"]')!.contains(document.activeElement))).toBe(true);
       seen.push(await active());
@@ -1794,12 +1794,13 @@ test.describe('a11y:', () => {
     expect(seen[0]).toBe('music');
     expect(seen[1]).toBe('sfx');
     expect(seen[2]).toBe('mute-toggle');
-    expect(seen[3]).toBe('camera');
-    expect(seen[4]).toBe('INPUT');
-    expect(seen[5]).toBe('fullscreen');
-    expect(seen[6]).toBe('hide-hud');
-    expect(seen[7]).toBe('reduced');
-    expect(seen[8]).toBe('resume');
+    expect(seen[3]).toBe('crt');
+    expect(seen[4]).toBe('camera');
+    expect(seen[5]).toBe('INPUT');
+    expect(seen[6]).toBe('fullscreen');
+    expect(seen[7]).toBe('hide-hud');
+    expect(seen[8]).toBe('reduced');
+    expect(seen[9]).toBe('resume');
     await page.keyboard.press('Shift+Tab');
     expect(await active()).toBe('reduced');
     await page.keyboard.press('Tab');
@@ -1814,9 +1815,21 @@ test.describe('a11y:', () => {
     expect(await music.inputValue()).not.toBe(was);
     expect((await callNames(page, 'setVolume')).length).toBe(before + 1);
 
-    // Amendment VW (T13): the camera button by Enter, two stops on from the slider.
+    // Amendment CR (T14): the CRT box by Space, three stops on from the slider; it sends setCrt and Space again sends it back.
     await page.keyboard.press('Tab');
     await page.keyboard.press('Tab');
+    await page.keyboard.press('Tab');
+    expect(await active()).toBe('crt');
+    await expect(page.locator('[data-mv="crt"]')).toBeChecked();
+    await page.keyboard.press('Space');
+    await expect(page.locator('[data-mv="crt"]')).not.toBeChecked();
+    let crts = await callNames(page, 'setCrt');
+    expect(crts[crts.length - 1]!.args).toEqual([false]);
+    await page.keyboard.press('Space');
+    crts = await callNames(page, 'setCrt');
+    expect(crts[crts.length - 1]!.args).toEqual([true]);
+
+    // Amendment VW (T13): the camera button by Enter, one stop on from the CRT box.
     await page.keyboard.press('Tab');
     expect(await active()).toBe('camera');
     await page.keyboard.press('Enter');
@@ -2644,10 +2657,13 @@ test.describe('storage:', () => {
     await page.locator('[data-mv="reduced"]').check();
     // E3 (amendment FH): HIDE HUD is stored with the others, so this row is also a browser catcher of f12.
     await page.locator('[data-mv="hide-hud"]').check();
-    expect((await stored(page)).settings).toEqual({ music: 0.25, sfx: 0.4, muted: true, quality: 2, reduced: true, hideHud: true, cam: 'chase' });
+    expect((await stored(page)).settings).toEqual({ music: 0.25, sfx: 0.4, muted: true, quality: 2, reduced: true, hideHud: true, cam: 'chase', crt: true });
     // Amendment VW (T13): the camera button steps to the next camera, and the camera is stored by name with the others.
     await page.locator('[data-mv="camera"]').click();
-    expect((await stored(page)).settings).toEqual({ music: 0.25, sfx: 0.4, muted: true, quality: 2, reduced: true, hideHud: true, cam: 'cockpit' });
+    expect((await stored(page)).settings).toEqual({ music: 0.25, sfx: 0.4, muted: true, quality: 2, reduced: true, hideHud: true, cam: 'cockpit', crt: true });
+    // Amendment CR (T14): the CRT box is on for a new player, and clearing it is stored with the others.
+    await page.locator('[data-mv="crt"]').uncheck();
+    expect((await stored(page)).settings).toEqual({ music: 0.25, sfx: 0.4, muted: true, quality: 2, reduced: true, hideHud: true, cam: 'cockpit', crt: false });
 
     await page.evaluate(() => { window.__ui!.state('play'); });
     await risingFrames(page, 0, 12);
@@ -2661,6 +2677,7 @@ test.describe('storage:', () => {
     expect(calls.find((c) => c.name === 'setQuality')!.args).toEqual([2]);
     expect(calls.find((c) => c.name === 'setReducedMotion')!.args).toEqual([true]);
     expect(calls.find((c) => c.name === 'setCamMode')!.args).toEqual([1]);
+    expect(calls.find((c) => c.name === 'setCrt')!.args).toEqual([false]);
     await expect(page.locator('[data-mv="best"]')).toContainText(String(bests.score).padStart(8, '0'));
 
     await page.evaluate(() => { window.__ui!.state('cruise'); });
@@ -2669,6 +2686,7 @@ test.describe('storage:', () => {
     await expect(page.locator('input[value="2"]')).toBeChecked();
     await expect(page.locator('[data-mv="reduced"]')).toBeChecked();
     await expect(page.locator('[data-mv="hide-hud"]')).toBeChecked();
+    await expect(page.locator('[data-mv="crt"]')).not.toBeChecked();
     await expect(page.locator('[data-mv="camera"]')).toContainText('COCKPIT');
     await expect(page.locator('[data-mv="camera"]')).toHaveAccessibleName('Camera: cockpit. Press for the next camera.');
   });
@@ -3217,7 +3235,7 @@ test.describe('fullscreen: desktop', () => {
     await expect(box).toBeVisible();
     await expect(box).not.toBeChecked();
     expect(await page.evaluate(() => document.querySelector('.mv-toggles > label:first-child input')?.getAttribute('data-mv') ?? null)).toBe('fullscreen');
-    expect(await tabCycle(page, 9)).toEqual(['music', 'sfx', 'mute-toggle', 'camera', 'INPUT', 'fullscreen', 'hide-hud', 'reduced', 'resume']);
+    expect(await tabCycle(page, 10)).toEqual(['music', 'sfx', 'mute-toggle', 'crt', 'camera', 'INPUT', 'fullscreen', 'hide-hud', 'reduced', 'resume']);
   });
 
   test('(2) a mouse click on its label enters and ticks, a second leaves and unticks, and neither toggles the run', async ({ page }) => {
@@ -3233,7 +3251,7 @@ test.describe('fullscreen: desktop', () => {
   test('(3) Tab to it and Space enters and ticks; Space again leaves and unticks', async ({ page }) => {
     await page.addInitScript(installFsCounter);
     await page.goto(url({ state: 'cruise' }));
-    expect((await tabCycle(page, 6))[5]).toBe('fullscreen');
+    expect((await tabCycle(page, 7))[6]).toBe('fullscreen');
     await fsAction(page, () => page.keyboard.press('Space'));
     expect(await fsRead(page)).toMatchObject({ std: 'HTML', box: true });
     await fsAction(page, () => page.keyboard.press('Space'));
@@ -3313,7 +3331,7 @@ test.describe('fullscreen: desktop', () => {
       });
       expect(label, name).toEqual({ w: 0, h: 0, display: 'none', hidden: true });
       await expect(p.getByRole('checkbox', { name: 'FULLSCREEN' })).toHaveCount(0);
-      expect(await tabCycle(p, 8), name).toEqual(['music', 'sfx', 'mute-toggle', 'camera', 'INPUT', 'hide-hud', 'reduced', 'resume']);
+      expect(await tabCycle(p, 9), name).toEqual(['music', 'sfx', 'mute-toggle', 'crt', 'camera', 'INPUT', 'hide-hud', 'reduced', 'resume']);
       if (p !== page) {
         const api = await p.evaluate(() => {
           const d = document as Document & Record<string, unknown>;
@@ -4190,7 +4208,7 @@ for (const v of FH_REVIEW) {
 
       if (v.focus) {
         await page.goto(url({ state: 'cruise' }));
-        expect((await tabCycle(page, 6))[5]).toBe('fullscreen');
+        expect((await tabCycle(page, 7))[6]).toBe('fullscreen');
         await freeze(page);
         await saveCssShot(page, info, `fh-focus-fullscreen-${tag}`);
       }

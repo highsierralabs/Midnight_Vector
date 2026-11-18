@@ -47,9 +47,11 @@ export async function bootApp(o: BootOptions): Promise<void> {
   const neutralFeel = createNeutralFeel();
   let bootGovernor: Governor = createGovernor({ software: false, bootP95Ms: 0, forced: 3 });
   const view = createAppView(sim.state, sim.events, feel.out, bootGovernor.profile);
+  // T14: on by default, as a new player's setting is, until Ui.mount sends the stored choice.
+  view.crt = params.crt ?? true;
   let governor: Governor | null = null;
   const cam = createCamState();
-  const commands = createCommands({ sim, audio, view, cam, governor: () => governor });
+  const commands = createCommands({ sim, audio, view, cam, crtForced: params.crt, governor: () => governor });
   const flags = createFlags();
   const counters = createCounters();
   const overrides = createOverrides();

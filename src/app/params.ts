@@ -9,12 +9,15 @@ export interface AppParams {
   readonly period: number;
   /** ?tier=0..4: CreateGovernor.forced, and no boot timing. null when absent or bad. */
   readonly tier: Tier | null;
+  /** T14. ?crt=0|1 forces the CRT screen over the player's choice. Under ?harness with no ?crt, false. null: the player's choice. */
+  readonly crt: boolean | null;
 }
 
 export const HARNESS_PERIOD = 1024;
 const INT = /^-?\d+$/;
 const NON_NEGATIVE_INT = /^\d+$/;
 const TIER = /^[0-4]$/;
+const CRT = /^[01]$/;
 
 /** A bad value warns once and falls back, so createWorld's RangeError cannot fire from a URL. */
 export function parseParams(search: string, warn: (msg: string) => void = (m) => { console.warn(m); }): AppParams {
@@ -48,5 +51,13 @@ export function parseParams(search: string, warn: (msg: string) => void = (m) =>
     else warn(`MV: ?tier=${rawTier} must be 0 to 4; ignored`);
   }
 
-  return { seed, harness, period, tier };
+  // T14: the harness's gates and references were drawn for the plain frame, so it starts with the CRT off.
+  let crt: boolean | null = harness ? false : null;
+  const rawCrt = q.get('crt');
+  if (rawCrt !== null) {
+    if (CRT.test(rawCrt)) crt = rawCrt === '1';
+    else warn(`MV: ?crt=${rawCrt} must be 0 or 1; ignored`);
+  }
+
+  return { seed, harness, period, tier, crt };
 }

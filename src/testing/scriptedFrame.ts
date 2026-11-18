@@ -16,6 +16,8 @@ export interface ScriptedFrameOptions {
   at?: Travel; tick?: number; palette?: number; biome?: number; hero?: HeroMode;
   bend?: { a: number; c: number }; feel?: Partial<FeelState>; sim?: Partial<SimState>;
   tier?: Tier; reducedMotion?: boolean; events?: readonly ScriptedEvent[]; world?: WorldSource;
+  /** T14: the CRT screen; default off, so a frame is the one drawn before T14. */
+  crt?: boolean;
   camX?: number; camY?: number;   // render-space; default as section 6.1 from sim.x and sim.y, with gain 0.72
   /** T13. Default the chase camera: CHASE, 0, 0. The caller places `at`, camX and camY to match. */
   cam?: { mode: CamMode; ahead: number; cockpitIn: number };
@@ -56,6 +58,7 @@ const view: FrameView = {
   dt: 0, tick: 0, alpha: 0, cam, camX: 0, camY: CAMERA_Y,
   camMode: CamMode.CHASE, camAhead: 0, cockpitIn: 0,
   phases: new Float32Array(PHASE_COUNT), sim, feel, zone, bend, events, quality: PROFILES[3], reducedMotion: false,
+  crt: false,
 };
 
 function fract(x: number): number {
@@ -166,5 +169,6 @@ export function scriptedFrame(t: number, o: ScriptedFrameOptions = {}): FrameVie
 
   view.quality = PROFILES[o.tier ?? 3];
   view.reducedMotion = o.reducedMotion ?? false;
+  view.crt = o.crt ?? false;
   return view;
 }

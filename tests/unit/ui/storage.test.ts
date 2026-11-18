@@ -21,12 +21,12 @@ const throwing: StoreLike = {
 
 describe('settings', () => {
   it('defaults when nothing is stored', () => {
-    expect(loadSettings(memory())).toEqual({ music: 0.8, sfx: 0.8, muted: false, quality: 'auto', reduced: null, hideHud: false, cam: CamMode.CHASE });
+    expect(loadSettings(memory())).toEqual({ music: 0.8, sfx: 0.8, muted: false, quality: 'auto', reduced: null, hideHud: false, cam: CamMode.CHASE, crt: true });
   });
 
   it('round trips', () => {
     const s = memory();
-    const v = { music: 0.25, sfx: 0.5, muted: true, quality: 2 as const, reduced: false, hideHud: true, cam: CamMode.NOSE };
+    const v = { music: 0.25, sfx: 0.5, muted: true, quality: 2 as const, reduced: false, hideHud: true, cam: CamMode.NOSE, crt: false };
     saveSettings(s, v);
     expect(loadSettings(s)).toEqual(v);
     // T13: the camera is stored by name.
@@ -37,10 +37,10 @@ describe('settings', () => {
   it('U1: the exact pre-FH string loads with hideHud false', () => {
     const s = memory();
     s.data.set(SETTINGS_KEY, '{"music":0.8,"sfx":0.8,"muted":false,"quality":"auto","reduced":null}');
-    expect(loadSettings(s)).toEqual({ music: 0.8, sfx: 0.8, muted: false, quality: 'auto', reduced: null, hideHud: false, cam: CamMode.CHASE });
+    expect(loadSettings(s)).toEqual({ music: 0.8, sfx: 0.8, muted: false, quality: 'auto', reduced: null, hideHud: false, cam: CamMode.CHASE, crt: true });
   });
 
-  it('U2: a non-boolean hideHud loads false, and the saved object has exactly seven keys (six before T13)', () => {
+  it('U2: a non-boolean hideHud loads false, and the saved object has exactly eight keys (six before T13, seven before T14)', () => {
     for (const bad of ['"yes"', '1', 'null']) {
       const s = memory();
       s.data.set(SETTINGS_KEY, `{"hideHud":${bad}}`);
@@ -49,8 +49,24 @@ describe('settings', () => {
     const s = memory();
     saveSettings(s, { ...defaultSettings(), hideHud: true });
     const saved = JSON.parse(s.data.get(SETTINGS_KEY)!) as Record<string, unknown>;
-    expect(Object.keys(saved).sort()).toEqual(['cam', 'hideHud', 'music', 'muted', 'quality', 'reduced', 'sfx']);
+    expect(Object.keys(saved).sort()).toEqual(['cam', 'crt', 'hideHud', 'music', 'muted', 'quality', 'reduced', 'sfx']);
     expect(saved['hideHud']).toBe(true);
+  });
+
+  // T14: crt is additive, and on is the default, so a store written before T14 loads with the CRT on, and so does anything not a boolean.
+  it('T14: a stored object without crt, or with a bad one, loads true; false loads false and round trips', () => {
+    const s = memory();
+    s.data.set(SETTINGS_KEY, '{"music":0.8,"sfx":0.8,"muted":false,"quality":"auto","reduced":null,"hideHud":false,"cam":"chase"}');
+    expect(loadSettings(s).crt).toBe(true);
+    for (const bad of ['"no"', '0', 'null']) {
+      s.data.set(SETTINGS_KEY, `{"crt":${bad}}`);
+      expect(loadSettings(s).crt, bad).toBe(true);
+    }
+    s.data.set(SETTINGS_KEY, '{"crt":false}');
+    expect(loadSettings(s).crt).toBe(false);
+    saveSettings(s, { ...defaultSettings(), crt: false });
+    expect(JSON.parse(s.data.get(SETTINGS_KEY)!)['crt']).toBe(false);
+    expect(loadSettings(s).crt).toBe(false);
   });
 
   // T13 A4: cam is additive, so a store written before T13 loads the chase camera, and so does anything unknown.

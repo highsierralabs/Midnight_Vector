@@ -27,6 +27,17 @@ export function scanPeriodFor(pixelRatio: number): number {
   return Math.max(2, Math.round(3 * pixelRatio));
 }
 
+/** T14: the CRT screen's strength when on, Synthwave City's CRT_STRENGTH. */
+export const CRT_STRENGTH = 0.7;
+
+/**
+ * T14: drawing-buffer pixels per CRT scanline and per grille triad, about 3 CSS px. An integer, as scanPeriodFor is, so
+ * every line is the same at a fractional ratio; never under 3, the least that draws the grille's three colours.
+ */
+export function crtPitchFor(pixelRatio: number): number {
+  return Math.max(3, Math.round(3 * pixelRatio));
+}
+
 /** Rows of a period that are dark. The shader computes the same thing, so the two cannot disagree. */
 export function scanDarkRows(period: number): number {
   return Math.floor(period / 3 + 0.5);

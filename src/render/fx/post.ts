@@ -10,7 +10,7 @@ import type { FrameView, PostStack, PostVariant, QualityProfile, RenderContext }
 import { withTimeout } from './asyncGuard';
 import { CrtEffect } from './crt';
 import { BLOOM_GAIN_MAX, BLOOM_INTENSITY, computePostParams, createPostParams } from './postParams';
-import { pixelRatioFor, scanAmpFor } from './quality';
+import { CRT_STRENGTH, pixelRatioFor, scanAmpFor } from './quality';
 
 const VARIANTS: readonly PostVariant[] = ['full', 'noCa', 'min', 'bare'];
 const COMPILE_GUARD_MS = 10_000;
@@ -28,6 +28,7 @@ export interface PostOptions {
   gainMax?: number;          // replaces BLOOM_GAIN_MAX
   flashWhite?: boolean;      // flash colour is white at luma .18
   scanPeriod?: number;       // replaces scanPeriodFor, for the moire control and the look comparison
+  crt?: boolean;             // T14: replaces FrameView.crt, so the dev page can show the CRT screen on its card
 }
 
 export interface PostDebug {
@@ -206,6 +207,7 @@ export function createPostStack(o: PostOptions = {}): PostStack & { readonly deb
       const b = need();
       computePostParams(v, paramVariant(), appliedRatio, gainMax, params);
       if (o.scanPeriod !== undefined && params.scan > 0) params.scan = scanAmpFor(o.scanPeriod);
+      if (o.crt !== undefined) params.crt = o.crt ? CRT_STRENGTH : 0;
       if (o.flashWhite) {
         params.flashR = 0.18;
         params.flashG = 0.18;

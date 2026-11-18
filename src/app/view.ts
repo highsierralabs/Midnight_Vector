@@ -21,6 +21,7 @@ export interface AppView {
   readonly events: EventBuffer;
   quality: Readonly<QualityProfile>;
   reducedMotion: boolean;
+  crt: boolean;
 }
 
 // Compile-time proof that AppView is a FrameView, with no cast.
@@ -40,6 +41,7 @@ export function createAppView(sim: Readonly<SimState>, events: EventBuffer, feel
     events,
     quality,
     reducedMotion: false,
+    crt: false,
   };
 }
 

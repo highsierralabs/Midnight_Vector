@@ -122,3 +122,35 @@ describe('flash', () => {
 it('passes glitch through', () => {
   expect(params('full', feel({ glitch: 0.35 })).glitch).toBeCloseTo(0.35, 12);
 });
+
+// T14: the CRT screen. Off leaves every value today's; on sets strength and pitch and leaves scan alone, since the shader
+// skips scan while the CRT is on.
+describe('T14 CRT screen', () => {
+  const VARIANTS: readonly PostVariant[] = ['full', 'noCa', 'min', 'bare'];
+
+  it('off: crt 0 in every variant, and every other value the same as a frame that never heard of it', () => {
+    for (const v of VARIANTS) {
+      const off = params(v, { crt: false });
+      const plain = params(v);
+      expect(off.crt).toBe(0);
+      expect(off).toEqual(plain);
+    }
+  });
+
+  it('on: .7 in every variant, Synthwave City strength, and nothing else moves', () => {
+    for (const v of VARIANTS) {
+      const on = params(v, { crt: true });
+      const off = params(v, { crt: false });
+      expect(on.crt).toBeCloseTo(0.7, 12);
+      expect({ ...on, crt: 0 }).toEqual(off);
+    }
+  });
+
+  it('pitch is 3, 5 and 6 drawing-buffer pixels at ratios 1, 1.5 and 2, and never under 3', () => {
+    expect(params('full', { crt: true }, 1).crtPitch).toBe(3);
+    expect(params('full', { crt: true }, 1.5).crtPitch).toBe(5);
+    expect(params('full', { crt: true }, 2).crtPitch).toBe(6);
+    expect(params('min', { crt: true }, 0.75).crtPitch).toBe(3);
+    expect(params('bare', { crt: true }, 0.5).crtPitch).toBe(3);
+  });
+});

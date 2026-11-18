@@ -2,7 +2,7 @@
 import { describe, expect, it } from 'vitest';
 import type { QualityProfile, Tier } from '../../../src/contracts/index';
 import { fakeProfile } from '../../../src/testing/scriptedFrame';
-import { TIERS, pixelRatioFor, scanAmpFor, scanDarkRows, scanPeriodFor } from '../../../src/render/fx/quality';
+import { CRT_STRENGTH, TIERS, crtPitchFor, pixelRatioFor, scanAmpFor, scanDarkRows, scanPeriodFor } from '../../../src/render/fx/quality';
 
 /** Section 5's table of the plan, written out again by hand so the test cannot follow a typo in the source. */
 const TABLE: readonly QualityProfile[] = [
@@ -96,5 +96,24 @@ describe('scan arithmetic', () => {
 
   it('gives the amplitude .10 at the design period 3', () => {
     expect(scanAmpFor(3)).toBeCloseTo(0.1, 9);
+  });
+});
+
+describe('T14 crtPitchFor', () => {
+  it('is the rounded 3 CSS px, an integer of at least 3', () => {
+    expect(crtPitchFor(1)).toBe(3);
+    expect(crtPitchFor(1.5)).toBe(5);
+    expect(crtPitchFor(2)).toBe(6);
+    expect(crtPitchFor(3)).toBe(9);
+    expect(crtPitchFor(0.75)).toBe(3);
+    for (let r = 0.1; r < 4; r += 0.013) {
+      const p = crtPitchFor(r);
+      expect(Number.isInteger(p)).toBe(true);
+      expect(p).toBeGreaterThanOrEqual(3);
+    }
+  });
+
+  it('is the City strength', () => {
+    expect(CRT_STRENGTH).toBe(0.7);
   });
 });

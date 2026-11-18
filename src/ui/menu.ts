@@ -56,6 +56,7 @@ export function createMenu(
   dom.hideHud.checked = settings.hideHud;
   setHideHud(settings.hideHud);
   for (const radio of dom.quality) radio.checked = qualityValue(radio.value) === settings.quality;
+  dom.crt.checked = settings.crt;
 
   function volumeInput(): void {
     settings.music = dom.music.valueAsNumber / 100;
@@ -110,6 +111,13 @@ export function createMenu(
   dom.hideHud.addEventListener('change', () => {
     settings.hideHud = dom.hideHud.checked;
     setHideHud(settings.hideHud);
+    persist();
+  });
+
+  // T14: the CRT screen. The post stack reads it from the next frame.
+  dom.crt.addEventListener('change', () => {
+    settings.crt = dom.crt.checked;
+    cmd.setCrt(settings.crt);
     persist();
   });
 
