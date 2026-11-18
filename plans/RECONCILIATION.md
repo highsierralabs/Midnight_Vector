@@ -1777,6 +1777,12 @@ The sentence now names three costs:
 - **What it gives up.** A pair on the list may now sit up to .227 without failing, and one that falls under .15 may rise again to its accepted value without failing. The accepted occlusion is what the operator saw and kept; the margin is .005 of the disc.
 - **Not decided here.** Whether to win the sun back later, by keeping rings and the shard trail off the disc (option 2): open to the operator.
 
+**DI-125. T11 closed: A26 green on the current build, HC10 skipped, and T05's A39 on `gpu` only (T05 amendment SK).**
+- **Source.** The operator, 2026-11-18, verbatim: "I don't have access to an iPhone", then "Yes" to closing T11 with the gaps listed; for A39, of three options: "Skip A39 outside gpu (Recommended)".
+- **Why.** A26 had not run since T12, T13 and T14. Run on `6533115`, everything passed but `test:software`, on A39 alone, red at the commit that added it (`613b3e7`, same value .2014) because nothing skipped it outside `gpu`, where T05's section 7 puts it.
+- **Changed.** T05: `tests/visual/props.spec.ts`, A39 skips outside `gpu` (SK-1). T08: HC10 recorded as skipped. T11: Progress, Decision log, section 13, status `done`.
+- **What it gives up.** Safari on an iPhone stays unverified; the chase direction is not checked under software rendering.
+
 ## Open after this pass
 
 Each has an owner and a named check. None is decided here, and none can be without running code or a person.
@@ -1802,7 +1808,7 @@ Each has an owner and a named check. None is decided here, and none can be witho
 | An opening gate's lower parts below the floor, under its alpha | A 60 fps pass at a gate's opening, viewing the floor below it | T00 owner, T05; DI-116 |
 | The swoop's strength; low rings touching the road at radius 8, or every ring floating at 6 or 7 with A16b over its [A] limit; the ship's outlined underside from below | Closed 2026-11-08 by the operator: swoop kept (O1's sun red accepted; the gate holds it at its accepted values since DI-124), rings touching the road accepted at radius 8, the ship reads as a solid object (T11's progress log) | DI-118; T11's feedback round |
 | The shader comment's "bit for bit" (DI-115) | Closed: corrected at DI-118's edit of `props.vert.glsl` | T00 owner; DI-116, DI-118 |
-| FULLSCREEN and HIDE HUD on real devices and browsers: fill, the real Esc and system exits, the iPad's prefixed path, the iPhone's missing row, HIDE HUD on touch, the look of the new row (2026-11-08: HC8, HC9 on Android, HC11, HC12, HC13 passed or ruled; open: iPad Safari, HC10; DI-119) | `dist/` rebuilt and served by the operator's preview, then HC8 to HC13 | The operator; T08, T11's pack; DI-117 |
+| FULLSCREEN and HIDE HUD on real devices and browsers: fill, the real Esc and system exits, the iPad's prefixed path, the iPhone's missing row, HIDE HUD on touch, the look of the new row (2026-11-08: HC8, HC9 on Android, HC11, HC12, HC13 passed or ruled; open: iPad Safari; HC10 skipped 2026-11-18, the operator has no iPhone (DI-125); DI-119) | `dist/` rebuilt and served by the operator's preview, then HC8 to HC13 | The operator; T08, T11's pack; DI-117 |
 
 ## Every design issue, accounted for
 

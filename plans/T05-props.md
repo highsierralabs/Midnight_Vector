@@ -6,7 +6,7 @@ owner: T05 executor
 depends_on: [T00]
 owns: [src/render/props/**, dev/props.html, tests/visual/props.spec.ts, tests/unit/props/**, plans/T05-props.md]
 reads: [architecture.md, Agents.md, src/contracts/**, src/core/**, src/testing/**, tests/support/**, plans/T00-foundation.md]
-updated: 2026-11-13T04:37Z
+updated: 2026-11-18T04:06Z
 ---
 
 ## 1. Purpose
@@ -575,6 +575,8 @@ Rows in `tests/visual/props.spec.ts`, describe `chevron: side`, on `gpu`, port 5
 
 **Human check HC3.** In the game over the tailnet: on Boulevard and Crystal Desert, chevrons left of the road read `>>>` and right of it `<<<`. Not verified by an agent.
 
+**Amendment SK, 2026-11-18:** A39 skips outside the `gpu` project, where the line above already ran it; A38 runs on both. See Progress, SK-1.
+
 ## 8. Idempotence and recovery
 
 - Safe to re-run: every test and `check:task` command. The dev server is reused if up, on port 5105.
@@ -811,6 +813,12 @@ All CV work below was done between commit `0d559b9` (2026-11-12T03:25Z) and the 
 - [x] 2026-11-13T04:24Z **Amendment VW, round 3 (the gloves again, for T13's M12, DI-122), reopened by the operator's review of round 2 with two reference photos, described in `plans/T13-views.md` section 2; status `in-progress`.** VW-6 drew the back of a hand across its grip, which is not what the pilot sees. `cockpit.ts`: the hand frame is replaced by the grip's own (`gp`: u outward from the grip's centre line, v up the canted grip); each glove is a cuff, a palm seen thumb side on from the wrist to the grip's outer half (two quads), four abutting fingertips come round from behind onto the grip's inner side, and a thumb in two pieces across the near side of the grip. The grip is narrower and longer (.026 to .028 wide, to .105 above the hub, where it was .032 to .036 and .09). No shader, uniform or draw call changed.
 - [x] 2026-11-13T04:37Z **Amendment VW, round 3, closed, status `done`.** `tests/unit/props/cockpit.test.ts`: 22 rows; the glove row now reads "a fist seen thumb side on" and bounds the grip showing above and below the fist. The wheel's reach holds with the cuff at the fist's outer end. Final code, one chain, nothing under `src/` edited while it ran: `npm run check` exit 0 (124 files, 2053 passed, 2 skipped; glsl 195 files, 0 hits); `tests/views` on `gpu` 17 passed; `props.spec.ts` 42 passed, 3 skipped; `npm run build` exit 0 and `bundle.spec.ts` 246.2 KB of 260. Not run in this round, because only the cockpit mesh changed: `ui.spec.ts`, `tests/e2e`, the art suites and the `gpu-timing` row, which last ran in round 2; and, as before, `tests/forever`, `tests/perf` other than the bundle, `test:software` and `check:task`. Stills are described in `plans/T13-views.md` section 9.
 
+### Amendment SK, A39 on `gpu` only (for T11's A26, operator approval)
+
+- [x] 2026-11-18T03:56Z Found by T11's A26 run (`HEAD` `6533115`): `npm run test:software` exit 1, 53 passed, 1 failed, A39, `left moves at bend 0.00003`, 0.2014 against more than 1. The same value at `613b3e7`, the commit that added A39, in a scratch worktree, so the red is CV's from the start: `test:software` was not run in CV or VW (Progress above), and nothing in A39's block skipped outside `gpu`. On SwiftShader the lights step at the same ticks as on the GPU (8 to 10, 20 to 22, 32 to 34 and 44 to 46 of 48), but the three bins' circular mean moves 0.1 to 0.3 rad a step, with mixed signs, against 0.5 to 2.3 on the GPU [O: per-step print in the worktree]. Why SwiftShader's light reads weaker was not traced.
+- [x] 2026-11-18T03:58Z **SK code**, by the operator's choice of three (skip A39 outside `gpu`; leave it and keep T11 `blocked`; investigate first), verbatim: "Skip A39 outside gpu (Recommended)". `props.spec.ts`: A39 skips unless the project is `gpu`, with the `gpu` describe's own skip line and reason, and a comment giving the cause. `-g "chevron: side"` on `gpu` and `software`: 3 passed, 1 skipped (A39 on `software`); A39 on `gpu` unchanged, bend +3e-5 left -7.95, right -7.91 rad; bend -3e-5 left 7.91, right 8.03.
+- [x] 2026-11-18T04:06Z **Amendment SK closed, status `done`.** `npm run test:software` rerun, 03:59:09Z to 04:06:00Z: exit 0, 53 passed, 595 skipped (A39 among them). `check:task -- T05` exit 0 (tsc, eslint 41 owned files 0 errors, vitest 15 files 190 passed).
+
 ## 10. Surprises and discoveries
 
 From building it, on the real project:
@@ -956,6 +964,7 @@ From the 2026-11-05 spike and arithmetic in `scratchpad/t05_spike/`, on simple p
 | **VW-5: the roof hangs from the stage's top edge by a rig value** | T13's R-16. `aTag.y` already carries the rig; 2 is read as "from the top", and the shift is the stage's height in cockpit units less one, from `uCockpit.y`. No new attribute or uniform | 2026-11-13 | T13 executor, for the operator |
 | **VW-6: a glove is the back of a hand across its grip** | T13's R-15: the operator read the four bands across the grip as fingers facing the camera. The fingers now leave the knuckles and go round the grip's inner side, the wrist is outside the grip where the forearm arrives, and the reach limit is unchanged | 2026-11-13 | T13 executor, for the operator |
 | **VW-7: a glove is a fist seen thumb side on, in the grip's own frame. VW-6 is superseded** | T13's R-22, from the operator's photos. The frame follows the grip, so the fingers stay square to it whatever its cant | 2026-11-13 | T13 executor, for the operator |
+| **SK-1: A39 runs on `gpu` only** | Section 7 puts CV's rows on `gpu`, and the spec's header says rows needing 1080p skip outside it. A39 had no skip, so `test:software` ran it, and SwiftShader's light reads too weak to pass (0.20 rad against 1) at every commit since CV. A38 passes on SwiftShader and keeps running there. Gives up: no check of the chase direction under software rendering | 2026-11-18 | T00 owner, for the operator |
 
 ## 12. Contract change requests
 
@@ -1015,6 +1024,10 @@ Fallback if rejected: T02 and T05 each keep a local constant of 14, as T02's pla
 
 **Not verified:** T11's art suites, whose frames contain chevrons in Boulevard and Crystal Desert, were not run; their reference images, where they exist, would differ wherever a chevron stands right of the road. Whole-repo `npm run check` exit 0 before the commit (section 9).
 
+### Amendment SK
+
+**Result:** `test:software` is green again with A39 on `gpu` only, where it passes unchanged. **Not verified:** the chase direction under SwiftShader, and why its light measure there is weak.
+
 ## 14. Revision notes
 
 - 2026-11-05T06:30Z Initial draft. No approved revisions, no absorbed requests.
@@ -1044,3 +1057,4 @@ Fallback if rejected: T02 and T05 each keep a local constant of 14, as T02's pla
 - 2026-11-13T04:01Z **Amendment VW, round 2** closed, status `done`. Not committed.
 - 2026-11-13T04:24Z **Amendment VW, round 3** (the gloves, for T13, DI-122): reopened, status `in-progress`. `owns` and `reads` unchanged.
 - 2026-11-13T04:37Z **Amendment VW, round 3** closed, status `done`. Not committed.
+- 2026-11-18T04:06Z **Amendment SK** (for T11's A26): A39 runs on `gpu` only; section 7's CV note, Progress, SK-1, Outcomes. Changed, inside `owns`: `tests/visual/props.spec.ts`, this plan. Status `done`. `owns` and `reads` unchanged. Not committed.

@@ -2130,7 +2130,10 @@ test.describe('chevron: side', () => {
     }, [x, a] as const);
   }
 
-  test('A39: the chase lights run the same way across the screen on both sides, and reverse with the bend', async ({ page }) => {
+  // Amendment SK: gpu only, as section 7 says. On SwiftShader the lights step at the same ticks, but the three bins' circular
+  // mean moves 0.1 to 0.3 rad a step against 1 to 2 on the GPU, so the row fails there (0.20 rad) at every commit since CV.
+  test('A39: the chase lights run the same way across the screen on both sides, and reverse with the bend', async ({ page, browserName }, info) => {
+    test.skip(browserName !== 'chromium' || info.project.name !== 'gpu', 'needs the 1080p gpu project');
     await open(page, { scene: 'one', ship: 0, post: 'off', tier: 3 });
     const rows: string[] = [];
     for (const a of [3e-5, -3e-5]) {
